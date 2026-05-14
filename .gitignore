@@ -1,0 +1,28 @@
+# Build output
+/bin/
+/dist/
+*.exe
+
+# Test artifacts
+/coverage.out
+/coverage.html
+*.test
+*.prof
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config
+.env
+.env.local
+*.local.yaml
+
+# Generated SDKs
+/sdk/
