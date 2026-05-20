@@ -1,0 +1,15 @@
+[package]
+name = "lattice-graph"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Schema graph analysis for Lattice ontologies: cycles, paths, impact analysis."
+
+[dependencies]
+lattice-core = { workspace = true }
+lattice-ir = { workspace = true }
+petgraph = { workspace = true }
+
+[dev-dependencies]

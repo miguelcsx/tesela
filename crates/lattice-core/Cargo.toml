@@ -1,0 +1,17 @@
+[package]
+name = "lattice-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Core primitives for Lattice: identifiers, errors, diagnostics, and domain enums."
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+regex = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]

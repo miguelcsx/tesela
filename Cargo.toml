@@ -1,0 +1,80 @@
+[workspace]
+members = [
+    "crates/lattice-core",
+    "crates/lattice-ir",
+    "crates/lattice-graph",
+    "crates/lattice-compiler",
+    "crates/lattice-runtime",
+    "crates/lattice-memory",
+    "crates/lattice-server",
+    "crates/lattice-graphql",
+    "crates/lattice-mcp",
+    "crates/lattice-sdk",
+    "crates/lattice-macros",
+    "crates/lattice-cabi",
+    "crates/lattice-vector",
+    "crates/lattice-telemetry",
+    "crates/lattice-ids",
+    "crates/lattice",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Miguel Cárdenas"]
+repository = "https://github.com/miguelcsx/lattice"
+
+[workspace.dependencies]
+lattice-core = { path = "crates/lattice-core", version = "0.1.0" }
+lattice-ir = { path = "crates/lattice-ir", version = "0.1.0" }
+lattice-graph = { path = "crates/lattice-graph", version = "0.1.0" }
+lattice-compiler = { path = "crates/lattice-compiler", version = "0.1.0" }
+lattice-runtime = { path = "crates/lattice-runtime", version = "0.1.0" }
+lattice-memory = { path = "crates/lattice-memory", version = "0.1.0" }
+lattice-server = { path = "crates/lattice-server", version = "0.1.0" }
+lattice-graphql = { path = "crates/lattice-graphql", version = "0.1.0" }
+lattice-mcp = { path = "crates/lattice-mcp", version = "0.1.0" }
+lattice-sdk = { path = "crates/lattice-sdk", version = "0.1.0" }
+lattice-macros = { path = "crates/lattice-macros", version = "0.1.0" }
+lattice-cabi = { path = "crates/lattice-cabi", version = "0.1.0" }
+lattice-vector = { path = "crates/lattice-vector", version = "0.1.0" }
+lattice-telemetry = { path = "crates/lattice-telemetry", version = "0.1.0" }
+lattice-ids = { path = "crates/lattice-ids", version = "0.1.0" }
+
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+indexmap = { version = "2", features = ["serde"] }
+petgraph = "0.8"
+slotmap = "1"
+smallvec = "1"
+sha2 = "0.10"
+hex = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+regex = "1"
+uuid = { version = "1", features = ["v4", "v7", "serde"] }
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace", "cors", "limit", "timeout"] }
+hyper = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+async-graphql = "7"
+async-graphql-axum = "7"
+jsonschema = "0.30"
+tokio-stream = "0.1"
+futures-util = "0.3"
+jsonrpc-core = "22"
+schemars = "0.8"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+aes-gcm = "0.10"
+base64 = "0.22"
+ulid = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

@@ -1,27 +1,9 @@
-## Lattice — development Makefile.
+## Lattice development Makefile.
 ##
-## Targets are intentionally minimal. Production deployment, container builds, and CI
-## live outside this file (see docs/10-deployment/ when published).
+## Lattice is a Rust runtime with a hand-written Python SDK. Targets here avoid
+## legacy Go-era build paths and keep development checks explicit.
 
-GO              ?= go
-GOFLAGS         ?=
-PKGS            := ./...
-COVER_PROFILE   := coverage.out
-
-# Build artifacts go to ./bin/
-BIN_DIR         := bin
-API_BIN         := $(BIN_DIR)/lattice-api
-WORKER_BIN      := $(BIN_DIR)/lattice-worker
-CLI_BIN         := $(BIN_DIR)/lattice
-
-# Linker flags inject version metadata. Override VERSION on tagged builds.
-VERSION         ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-COMMIT          ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
-BUILD_DATE      ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-LDFLAGS         := -s -w \
-	-X github.com/miguelcsx/lattice/internal/buildinfo.Version=$(VERSION) \
-	-X github.com/miguelcsx/lattice/internal/buildinfo.Commit=$(COMMIT) \
-	-X github.com/miguelcsx/lattice/internal/buildinfo.Date=$(BUILD_DATE)
+PYTHON ?= python
 
 .DEFAULT_GOAL := help
 
@@ -29,81 +11,81 @@ LDFLAGS         := -s -w \
 help: ## Show this help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-.PHONY: tidy
-tidy: ## Reconcile go.mod / go.sum.
-	$(GO) mod tidy
-
 .PHONY: fmt
-fmt: ## Format code (gofumpt + gci if available, falls back to gofmt).
-	@command -v gofumpt >/dev/null && gofumpt -w . || $(GO) fmt $(PKGS)
-	@command -v gci >/dev/null && gci write --skip-generated -s standard -s default -s 'prefix(github.com/miguelcsx/lattice)' . || true
+fmt: rust-fmt ## Format all Rust source files.
+
+.PHONY: check
+check: rust-check ## Type-check all Rust crates.
 
 .PHONY: lint
-lint: ## Run static analysis (golangci-lint required).
-	golangci-lint run ./...
-
-.PHONY: vet
-vet: ## go vet.
-	$(GO) vet $(PKGS)
+lint: rust-clippy ## Run Clippy with warnings denied.
 
 .PHONY: test
-test: ## Run unit tests with race detector.
-	$(GO) test -race -timeout 90s $(PKGS)
-
-.PHONY: test-short
-test-short: ## Run only short tests (skip integration).
-	$(GO) test -race -short -timeout 60s $(PKGS)
-
-.PHONY: test-integration
-test-integration: ## Run integration tests (requires Docker for testcontainers).
-	$(GO) test -race -tags=integration -timeout 300s $(PKGS)
-
-.PHONY: cover
-cover: ## Produce a coverage report (HTML output: coverage.html).
-	$(GO) test -race -coverprofile=$(COVER_PROFILE) -covermode=atomic $(PKGS)
-	$(GO) tool cover -html=$(COVER_PROFILE) -o coverage.html
-	@echo "Coverage report written to coverage.html"
-
-.PHONY: bench
-bench: ## Run benchmarks.
-	$(GO) test -run='^$$' -bench=. -benchmem $(PKGS)
+test: rust-test python-test ## Run Rust and Python tests.
 
 .PHONY: build
-build: build-api build-worker build-cli ## Build all three binaries.
-
-.PHONY: build-cabi
-build-cabi: $(BIN_DIR) ## Build liblattice.so (C ABI).
-	$(GO) build $(GOFLAGS) -tags cabi -buildmode=c-shared -ldflags '$(LDFLAGS)' -o dist/liblattice.so ./pkg/lattice/cabi
-
-.PHONY: build-cabi-all
-build-cabi-all: ## Cross-compile liblattice.so for linux-amd64, linux-arm64, darwin-amd64, darwin-arm64, windows-amd64.
-	@echo "Cross-compilation requires zig or golang.org/x/mobile. Placeholder target."
-	@mkdir -p dist
-	for pair in linux-amd64 linux-arm64 darwin-amd64 darwin-arm64 windows-amd64; do 		echo "Building for $$pair..."; 	done
-
-.PHONY: upload-release
-upload-release: ## Publish binaries to GitHub releases (requires gh CLI).
-	@test -n "$(VERSION)" || (echo "VERSION is required"; exit 1)
-	gh release create "v$(VERSION)" dist/liblattice-* --title "v$(VERSION)" --generate-notes
-
-.PHONY: build-api
-build-api: $(BIN_DIR) ## Build lattice-api.
-	$(GO) build $(GOFLAGS) -ldflags '$(LDFLAGS)' -o $(API_BIN) ./cmd/lattice-api
-
-.PHONY: build-worker
-build-worker: $(BIN_DIR) ## Build lattice-worker.
-	$(GO) build $(GOFLAGS) -ldflags '$(LDFLAGS)' -o $(WORKER_BIN) ./cmd/lattice-worker
-
-.PHONY: build-cli
-build-cli: $(BIN_DIR) ## Build lattice CLI.
-	$(GO) build $(GOFLAGS) -ldflags '$(LDFLAGS)' -o $(CLI_BIN) ./cmd/lattice
-
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
-
-.PHONY: clean
-clean: ## Remove build artifacts and coverage output.
-	rm -rf $(BIN_DIR) $(COVER_PROFILE) coverage.html
+build: rust-build build-cabi ## Build Rust crates and the native ABI library.
 
 .PHONY: verify
-verify: vet lint test ## Lint + vet + test (run before pushing).
+verify: rust-fmt-check rust-clippy rust-test python-test ## Run the local pre-push gate.
+
+.PHONY: rust-build
+rust-build: ## Build all Rust crates.
+	cargo build --workspace
+
+.PHONY: rust-check
+rust-check: ## Type-check all Rust crates.
+	cargo check --workspace
+
+.PHONY: rust-fmt
+rust-fmt: ## Format all Rust source files.
+	cargo fmt --all
+
+.PHONY: rust-fmt-check
+rust-fmt-check: ## Check Rust formatting.
+	cargo fmt --all -- --check
+
+.PHONY: rust-clippy
+rust-clippy: ## Run Clippy with warnings denied.
+	cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+.PHONY: rust-test
+rust-test: ## Run all Rust tests.
+	cargo test --workspace
+
+.PHONY: rust-doc
+rust-doc: ## Build Rust documentation.
+	cargo doc --workspace --no-deps
+
+.PHONY: rust-package
+rust-package: ## Check crate package metadata without publishing.
+	cargo package --workspace --allow-dirty --no-verify
+
+.PHONY: build-cabi
+build-cabi: ## Build the native runtime shared library used by Python.
+	cargo build -p lattice-cabi --release
+	mkdir -p dist
+	cp target/release/liblattice_cabi.so dist/liblattice.so 2>/dev/null || \
+	  cp target/release/liblattice_cabi.dylib dist/liblattice.dylib 2>/dev/null || \
+	  cp target/release/lattice_cabi.dll dist/lattice.dll 2>/dev/null || true
+	@echo "Native library written to dist/"
+
+.PHONY: build-cabi-debug
+build-cabi-debug: ## Build the native runtime shared library in debug mode.
+	cargo build -p lattice-cabi
+	mkdir -p dist
+	cp target/debug/liblattice_cabi.so dist/liblattice.so 2>/dev/null || \
+	  cp target/debug/liblattice_cabi.dylib dist/liblattice.dylib 2>/dev/null || \
+	  cp target/debug/lattice_cabi.dll dist/lattice.dll 2>/dev/null || true
+
+.PHONY: python-test
+python-test: ## Run Python SDK tests against the selected native library.
+	cd sdk/python && PYTHONPATH=. $(PYTHON) -m pytest tests/ -v
+
+.PHONY: python-build
+python-build: ## Build Python sdist/wheel.
+	cd sdk/python && $(PYTHON) -m build
+
+.PHONY: clean
+clean: ## Remove local build artifacts.
+	rm -rf dist target sdk/python/dist sdk/python/build sdk/python/*.egg-info
