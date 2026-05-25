@@ -4,8 +4,7 @@ use crate::ports::*;
 use crate::query::*;
 use crate::runtime::Runtime;
 use crate::runtime_internal::{
-    apply_redactions, index_vectors_for_mutation, lock_r, mutation_to_record,
-    record_mutation_lineage,
+    apply_redactions, index_vectors_for_mutation, mutation_to_record, record_mutation_lineage,
 };
 use crate::EvalContext;
 use lattice_core::{ApiName, Error, Operation, Value};
@@ -23,7 +22,9 @@ impl Runtime {
         let start = std::time::Instant::now();
         self.check_rate_limit(actor, "mutate")?;
         self.authorize_with_decision(actor, Operation::Mutate, "object_type", object_name)?;
-        let ot = lock_r(&self.object_types)?
+        let snap = self.ontology()?;
+        let ot = snap
+            .object_types
             .get(object_name)
             .cloned()
             .ok_or_else(|| Error::not_found("object_type", object_name))?;
@@ -139,7 +140,9 @@ impl Runtime {
         load_id: &str,
     ) -> Result<(), Error> {
         self.authorize_with_decision(actor, Operation::Mutate, "object_type", object_name)?;
-        let ot = lock_r(&self.object_types)?
+        let snap = self.ontology()?;
+        let ot = snap
+            .object_types
             .get(object_name)
             .cloned()
             .ok_or_else(|| Error::not_found("object_type", object_name))?;
@@ -190,7 +193,9 @@ impl Runtime {
     /// Resolve a named object set and return its records.
     #[tracing::instrument(skip(self, actor), err)]
     pub fn resolve_object_set(&self, actor: &Actor, name: &ApiName) -> Result<Page, Error> {
-        let os = lock_r(&self.object_sets)?
+        let snap = self.ontology()?;
+        let os = snap
+            .object_sets
             .get(name)
             .cloned()
             .ok_or_else(|| Error::not_found("object_set", name))?;
@@ -288,7 +293,9 @@ impl Runtime {
         mode: ExecutionMode,
     ) -> Result<PipelineResult, Error> {
         self.authorize_with_decision(actor, Operation::Execute, "pipeline", pipeline_name)?;
-        let pipeline = lock_r(&self.pipelines)?
+        let snap = self.ontology()?;
+        let pipeline = snap
+            .pipelines
             .get(pipeline_name)
             .cloned()
             .ok_or_else(|| Error::not_found("pipeline", pipeline_name))?;
@@ -354,7 +361,9 @@ impl Runtime {
         input: Value,
     ) -> Result<lattice_ir::ActionResult, Error> {
         self.authorize_with_decision(actor, Operation::Execute, "action", action_name)?;
-        let action = lock_r(&self.actions)?
+        let snap = self.ontology()?;
+        let action = snap
+            .actions
             .get(action_name)
             .cloned()
             .ok_or_else(|| Error::not_found("action", action_name))?;
@@ -409,7 +418,9 @@ impl Runtime {
         input: Value,
     ) -> Result<String, Error> {
         self.authorize_with_decision(actor, Operation::Execute, "agent", agent_name)?;
-        let agent = lock_r(&self.agents)?
+        let snap = self.ontology()?;
+        let agent = snap
+            .agents
             .get(agent_name)
             .cloned()
             .ok_or_else(|| Error::not_found("agent", agent_name))?;

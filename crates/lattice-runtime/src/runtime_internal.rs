@@ -146,8 +146,9 @@ impl Runtime {
         };
         self.audit_sink.write_audit(record)?;
 
-        let workspace_name = lock_r(&self.spec)
-            .map(|g| g.workspace.api_name.to_string())
+        let workspace_name = self
+            .ontology()
+            .map(|snap| snap.spec.workspace.api_name.to_string())
             .unwrap_or_default();
         let event = Event {
             id: self.id_generator.new_id("evt"),

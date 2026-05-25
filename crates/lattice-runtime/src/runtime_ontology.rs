@@ -1,8 +1,8 @@
 //! Branch management, ontology lifecycle, and system introspection.
 
 use crate::query::Actor;
-use crate::runtime::Runtime;
-use crate::runtime_internal::{lock_r, lock_w};
+use crate::runtime::{OntologySnapshot, Runtime};
+use crate::runtime_internal::lock_w;
 use lattice_core::{ApiName, Error, Value};
 use lattice_graph::{GraphBuilder, SchemaGraph};
 use lattice_ir::{Branch, BranchStatus, Capabilities, HealthStatus, Spec};
@@ -17,8 +17,8 @@ impl Runtime {
             .branch_store
             .as_ref()
             .ok_or_else(|| Error::unsupported("branch_store not configured"))?;
-        let spec = Arc::clone(&*lock_r(&self.spec)?);
-        bs.create_branch(&spec, label, &actor.user_id)
+        let snap = self.ontology()?;
+        bs.create_branch(&snap.spec, label, &actor.user_id)
     }
 
     /// Update the draft spec on an open branch.
@@ -88,46 +88,16 @@ impl Runtime {
     /// Apply a new spec, returning the diff.
     #[tracing::instrument(skip(self, new_spec), err)]
     pub fn apply_spec(&self, new_spec: Spec) -> Result<lattice_compiler::Diff, Error> {
-        let old_spec = Arc::clone(&*lock_r(&self.spec)?);
-        let diff = lattice_compiler::compute_diff(&old_spec, &new_spec);
-
-        let new_ot = Self::index_object_types(&new_spec);
-        let new_ds = Self::index_datasources(&new_spec);
-        let new_actions = Self::index_actions(&new_spec);
-        let new_agents = Self::index_agents(&new_spec);
-        let new_policies = Self::index_policies(&new_spec);
-        let new_links = Self::index_links(&new_spec);
-        let new_roles = Self::index_roles(&new_spec);
-        let new_object_sets = Self::index_object_sets(&new_spec);
-        let new_pipelines = Self::index_pipelines(&new_spec);
-        let new_artifact_types = Self::index_artifact_types(&new_spec);
-        let new_upload_flows = Self::index_upload_flows(&new_spec);
-        let new_job_types = Self::index_job_types(&new_spec);
-        let new_event_types = Self::index_event_types(&new_spec);
-        let new_capability_grants = Self::index_capability_grants(&new_spec);
-        let new_aggregate_views = Self::index_aggregate_views(&new_spec);
+        let old_snap = self.ontology()?;
+        let diff = lattice_compiler::compute_diff(&old_snap.spec, &new_spec);
 
         if let Some(meta) = &self.meta_store {
             let hash = lattice_compiler::hash_spec(&new_spec);
             meta.store_spec(&new_spec, &hash)?;
         }
 
-        *lock_w(&self.spec)? = Arc::new(new_spec);
-        *lock_w(&self.object_types)? = new_ot;
-        *lock_w(&self.datasources)? = new_ds;
-        *lock_w(&self.actions)? = new_actions;
-        *lock_w(&self.agents)? = new_agents;
-        *lock_w(&self.policies)? = new_policies;
-        *lock_w(&self.links)? = new_links;
-        *lock_w(&self.roles)? = new_roles;
-        *lock_w(&self.object_sets)? = new_object_sets;
-        *lock_w(&self.pipelines)? = new_pipelines;
-        *lock_w(&self.artifact_types)? = new_artifact_types;
-        *lock_w(&self.upload_flows)? = new_upload_flows;
-        *lock_w(&self.job_types)? = new_job_types;
-        *lock_w(&self.event_types)? = new_event_types;
-        *lock_w(&self.capability_grants)? = new_capability_grants;
-        *lock_w(&self.aggregate_views)? = new_aggregate_views;
+        let new_snap = Arc::new(OntologySnapshot::build(new_spec));
+        *lock_w(&self.ontology)? = new_snap;
 
         Ok(diff)
     }
@@ -139,8 +109,8 @@ impl Runtime {
         new_spec: Spec,
     ) -> Result<lattice_compiler::Diff, Error> {
         if let Some(me) = &self.migration_executor {
-            let old_spec = Arc::clone(&*lock_r(&self.spec)?);
-            let diff = lattice_compiler::compute_diff(&old_spec, &new_spec);
+            let old_snap = self.ontology()?;
+            let diff = lattice_compiler::compute_diff(&old_snap.spec, &new_spec);
             let plan = me.plan(&diff)?;
 
             if let Some(registry) = &self.backend_registry {
@@ -157,24 +127,25 @@ impl Runtime {
     /// Return a cloned snapshot of the current spec.
     #[tracing::instrument(skip(self), err)]
     pub fn spec(&self) -> Result<Spec, Error> {
-        Ok(Spec::clone(&*lock_r(&self.spec)?))
+        let snap = self.ontology()?;
+        Ok(Spec::clone(&snap.spec))
     }
 
     /// Build the schema graph for the current spec.
     #[tracing::instrument(skip(self), err)]
     pub fn schema_graph(&self) -> Result<SchemaGraph, Error> {
-        let spec = Arc::clone(&*lock_r(&self.spec)?);
-        Ok(GraphBuilder::build(&spec))
+        let snap = self.ontology()?;
+        Ok(GraphBuilder::build(&snap.spec))
     }
 
     /// Health check.
     #[tracing::instrument(skip(self), err)]
     pub fn health(&self) -> Result<HealthStatus, Error> {
-        let spec = self.spec()?;
+        let snap = self.ontology()?;
         Ok(HealthStatus {
             status: "healthy".to_string(),
-            spec_version: spec.version.to_string(),
-            workspace: spec.workspace.api_name.to_string(),
+            spec_version: snap.spec.version.to_string(),
+            workspace: snap.spec.workspace.api_name.to_string(),
         })
     }
 
