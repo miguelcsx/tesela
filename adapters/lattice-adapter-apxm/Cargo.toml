@@ -1,0 +1,20 @@
+[package]
+name = "lattice-adapter-apxm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "APXM agent runtime adapter for the Lattice runtime"
+keywords = ["lattice", "apxm", "agents", "adapter"]
+categories = ["api-bindings"]
+
+[dependencies]
+lattice-core.workspace = true
+lattice-ir.workspace = true
+lattice-runtime.workspace = true
+
+serde_json.workspace = true
+tracing.workspace = true
+reqwest.workspace = true
+tokio.workspace = true

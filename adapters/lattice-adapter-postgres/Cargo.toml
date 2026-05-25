@@ -1,0 +1,23 @@
+[package]
+name = "lattice-adapter-postgres"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "PostgreSQL backend adapter for the Lattice runtime"
+keywords = ["lattice", "postgres", "database", "adapter"]
+categories = ["database"]
+
+[dependencies]
+lattice-core.workspace = true
+lattice-ir.workspace = true
+lattice-runtime.workspace = true
+
+sqlx.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }

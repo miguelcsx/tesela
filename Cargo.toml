@@ -16,6 +16,8 @@ members = [
     "crates/lattice-telemetry",
     "crates/lattice-ids",
     "crates/lattice",
+    "adapters/lattice-adapter-postgres",
+    "adapters/lattice-adapter-apxm",
 ]
 resolver = "3"
 
@@ -42,6 +44,10 @@ lattice-cabi = { path = "crates/lattice-cabi", version = "0.1.0" }
 lattice-vector = { path = "crates/lattice-vector", version = "0.1.0" }
 lattice-telemetry = { path = "crates/lattice-telemetry", version = "0.1.0" }
 lattice-ids = { path = "crates/lattice-ids", version = "0.1.0" }
+lattice-adapter-postgres = { path = "adapters/lattice-adapter-postgres", version = "0.1.0" }
+lattice-adapter-apxm = { path = "adapters/lattice-adapter-apxm", version = "0.1.0" }
+
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "json", "chrono", "uuid"] }
 
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
