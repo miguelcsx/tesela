@@ -8,6 +8,7 @@ use crate::ports::Scheduler;
 use crate::query::WorkItem;
 use lattice_core::Error;
 use std::collections::{BTreeSet, HashMap};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -152,6 +153,17 @@ struct Job {
 pub struct MemoryCronScheduler {
     jobs: Arc<Mutex<HashMap<String, Job>>>,
     counter: Mutex<u64>,
+    stop: Arc<AtomicBool>,
+    handle: Mutex<Option<thread::JoinHandle<()>>>,
+}
+
+impl Drop for MemoryCronScheduler {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::Relaxed);
+        if let Some(handle) = self.handle.lock().unwrap_or_else(|e| e.into_inner()).take() {
+            let _ = handle.join();
+        }
+    }
 }
 
 impl MemoryCronScheduler {
@@ -166,12 +178,14 @@ impl MemoryCronScheduler {
     {
         let jobs: Arc<Mutex<HashMap<String, Job>>> = Arc::new(Mutex::new(HashMap::new()));
         let jobs_clone = jobs.clone();
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop_clone = stop.clone();
 
-        thread::Builder::new()
+        let handle = thread::Builder::new()
             .name("lattice-cron".to_string())
             .spawn(move || {
                 let mut last_minute: Option<u32> = None;
-                loop {
+                while !stop_clone.load(Ordering::Relaxed) {
                     thread::sleep(Duration::from_secs(1));
                     let now = chrono::Utc::now();
                     use chrono::Timelike;
@@ -193,6 +207,8 @@ impl MemoryCronScheduler {
         Arc::new(Self {
             jobs,
             counter: Mutex::new(0),
+            stop,
+            handle: Mutex::new(Some(handle)),
         })
     }
 
