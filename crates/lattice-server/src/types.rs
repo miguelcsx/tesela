@@ -10,14 +10,6 @@ use lattice_runtime::{ports::ActorResolver, runtime::Runtime};
 use std::sync::Arc;
 use std::time::Duration;
 
-/// TLS configuration for the server.
-pub struct TlsConfig {
-    /// Path to the PEM certificate file.
-    pub cert_path: std::path::PathBuf,
-    /// Path to the PEM private key file.
-    pub key_path: std::path::PathBuf,
-}
-
 /// CORS configuration.
 #[derive(Default)]
 pub struct CorsConfig {
@@ -41,8 +33,6 @@ pub struct ServerOptions {
     pub request_timeout: Duration,
     /// CORS configuration.  `None` = allow all origins.
     pub cors: Option<CorsConfig>,
-    /// TLS configuration.  `None` = plain HTTP.
-    pub tls: Option<TlsConfig>,
 }
 
 impl ServerOptions {
@@ -54,7 +44,6 @@ impl ServerOptions {
             max_body_bytes: 4 * 1024 * 1024,
             request_timeout: Duration::from_secs(30),
             cors: None,
-            tls: None,
         }
     }
 
@@ -67,12 +56,6 @@ impl ServerOptions {
     /// Restrict CORS to specific origins, methods, and credential policy.
     pub fn with_cors(mut self, cfg: CorsConfig) -> Self {
         self.cors = Some(cfg);
-        self
-    }
-
-    /// Enable TLS with the given certificate and key paths.
-    pub fn with_tls(mut self, cfg: TlsConfig) -> Self {
-        self.tls = Some(cfg);
         self
     }
 

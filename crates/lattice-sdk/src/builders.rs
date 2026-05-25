@@ -37,6 +37,10 @@ pub struct ObjectTypeBuilder {
 
 impl ObjectTypeBuilder {
     /// Create a new builder.
+    ///
+    /// The default datasource is `"memory"` (in-process, non-persistent).
+    /// Call [`.datasource()`](Self::datasource) to set a production backend
+    /// before deploying.
     pub fn new(api_name: impl AsRef<str>) -> Self {
         Self {
             api_name: ApiName::new_unchecked(api_name.as_ref()),

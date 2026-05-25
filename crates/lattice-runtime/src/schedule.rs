@@ -8,7 +8,7 @@ use crate::ports::Scheduler;
 use crate::query::WorkItem;
 use lattice_core::Error;
 use std::collections::{BTreeSet, HashMap};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -143,6 +143,9 @@ struct Job {
     task: WorkItem,
 }
 
+/// Maximum number of jobs allowed by default.
+const DEFAULT_MAX_JOBS: usize = 1024;
+
 /// In-memory cron scheduler that fires registered jobs in a background thread.
 ///
 /// The scheduler polls at 1-second resolution.  Jobs whose cron spec matches
@@ -155,6 +158,7 @@ pub struct MemoryCronScheduler {
     counter: Mutex<u64>,
     stop: Arc<AtomicBool>,
     handle: Mutex<Option<thread::JoinHandle<()>>>,
+    max_jobs: AtomicUsize,
 }
 
 impl Drop for MemoryCronScheduler {
@@ -209,7 +213,13 @@ impl MemoryCronScheduler {
             counter: Mutex::new(0),
             stop,
             handle: Mutex::new(Some(handle)),
+            max_jobs: AtomicUsize::new(DEFAULT_MAX_JOBS),
         })
+    }
+
+    /// Override the maximum number of registered jobs (default: 1024).
+    pub fn set_max_jobs(&self, limit: usize) {
+        self.max_jobs.store(limit, Ordering::Relaxed);
     }
 
     fn next_id(&self) -> String {
@@ -223,10 +233,15 @@ impl Scheduler for MemoryCronScheduler {
     fn schedule(&self, cron: &str, task: WorkItem) -> Result<String, Error> {
         let spec = CronSpec::parse(cron)?;
         let id = self.next_id();
-        self.jobs
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(id.clone(), Job { spec, task });
+        let mut jobs = self.jobs.lock().unwrap_or_else(|e| e.into_inner());
+        let max = self.max_jobs.load(Ordering::Relaxed);
+        if jobs.len() >= max {
+            return Err(Error::validation(format!(
+                "cron job limit reached ({}); cancel existing jobs or increase max_jobs",
+                max
+            )));
+        }
+        jobs.insert(id.clone(), Job { spec, task });
         Ok(id)
     }
 

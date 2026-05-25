@@ -28,7 +28,10 @@ impl DefaultBackendRegistry {
 
     /// Register a backend under a datasource name.
     pub fn register(&self, ds_name: ApiName, backend: Arc<dyn Backend>) {
-        self.backends.write().unwrap().insert(ds_name, backend);
+        self.backends
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(ds_name, backend);
     }
 }
 
@@ -42,7 +45,7 @@ impl Default for DefaultBackendRegistry {
 
 impl BackendRegistry for DefaultBackendRegistry {
     fn acquire(&self, ds_name: &ApiName) -> Result<Box<dyn Backend>, Error> {
-        let backends = self.backends.read().unwrap();
+        let backends = self.backends.read().unwrap_or_else(|e| e.into_inner());
         let backend = backends
             .get(ds_name)
             .cloned()

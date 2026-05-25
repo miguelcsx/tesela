@@ -130,8 +130,8 @@ impl BulkLoader for MemoryBackend {
         load_id: &str,
     ) -> Result<i64, Error> {
         let count = records.len() as i64;
-        let mut store = self.store.write().unwrap();
-        let mut log = self.load_log.write().unwrap();
+        let mut store = self.store.write().unwrap_or_else(|e| e.into_inner());
+        let mut log = self.load_log.write().unwrap_or_else(|e| e.into_inner());
         let type_store = store.entry(object_type.clone()).or_default();
         let load_entries = log.entry(load_id.to_string()).or_default();
 
@@ -150,8 +150,8 @@ impl BulkLoader for MemoryBackend {
 
 impl Rollbacker for MemoryBackend {
     fn rollback(&self, _object_type: &ApiName, load_id: &str) -> Result<(), Error> {
-        let mut store = self.store.write().unwrap();
-        let mut log = self.load_log.write().unwrap();
+        let mut store = self.store.write().unwrap_or_else(|e| e.into_inner());
+        let mut log = self.load_log.write().unwrap_or_else(|e| e.into_inner());
         if let Some(entries) = log.remove(load_id) {
             for (obj_type, pk_key) in entries {
                 if let Some(type_store) = store.get_mut(&obj_type) {

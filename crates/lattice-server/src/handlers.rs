@@ -541,7 +541,13 @@ pub(crate) async fn subscribe_handler(
 
     tokio::task::spawn_blocking(move || {
         while let Ok(event) = sync_rx.recv() {
-            let data = serde_json::to_string(&event).unwrap_or_default();
+            let data = match serde_json::to_string(&event) {
+                Ok(d) => d,
+                Err(e) => {
+                    tracing::warn!(error = %e, "failed to serialize SSE event, skipping");
+                    continue;
+                }
+            };
             let sse = SseEvent::default().data(data);
             if tx.blocking_send(Ok(sse)).is_err() {
                 break;

@@ -194,6 +194,13 @@ pub struct Runtime {
 impl Runtime {
     /// Create a new runtime from a compiled spec and options.
     pub fn new(spec: Spec, opts: RuntimeOptions) -> Result<Arc<Self>, Error> {
+        if opts.allow_dev_defaults {
+            tracing::warn!(
+                "Runtime created with allow_dev_defaults=true; \
+                 policy and audit are disabled — do not use in production"
+            );
+        }
+
         if opts.audit_sink.is_none() && !opts.allow_dev_defaults {
             return Err(Error::validation(
                 "audit_sink is required; use RuntimeOptions::dev() only for local tests/examples",
