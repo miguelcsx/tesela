@@ -28,8 +28,8 @@ impl McpServer {
     }
 
     /// Generate the list of all available MCP tools from the current spec.
-    pub fn list_tools(&self) -> Vec<McpTool> {
-        let spec = self.runtime.spec();
+    pub fn list_tools(&self) -> Result<Vec<McpTool>, Error> {
+        let spec = self.runtime.spec()?;
         let mut result = Vec::new();
 
         for ot in &spec.object_types {
@@ -57,7 +57,7 @@ impl McpServer {
             result.push(tools::job_tool(job));
         }
 
-        result
+        Ok(result)
     }
 
     /// Handle a single JSON-RPC request and return a response.
@@ -81,7 +81,7 @@ impl McpServer {
             })),
 
             "tools/list" => {
-                let tools = self.list_tools();
+                let tools = self.list_tools()?;
                 Ok(serde_json::json!({ "tools": tools }))
             }
 
@@ -108,7 +108,7 @@ impl McpServer {
             claims: BTreeMap::new(),
         };
 
-        let spec = self.runtime.spec();
+        let spec = self.runtime.spec()?;
 
         if let Some(obj_name) = name.strip_prefix("search_") {
             let obj = obj_name

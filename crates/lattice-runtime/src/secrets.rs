@@ -143,9 +143,9 @@ mod tests {
 
     #[test]
     fn env_resolver_reads_env() {
-        std::env::set_var("LATTICE_TEST_SECRET_XYZ", "abc");
+        unsafe { std::env::set_var("LATTICE_TEST_SECRET_XYZ", "abc") };
         let r = EnvSecretResolver::new();
         assert_eq!(r.resolve("LATTICE_TEST_SECRET_XYZ").unwrap(), "abc");
-        std::env::remove_var("LATTICE_TEST_SECRET_XYZ");
+        unsafe { std::env::remove_var("LATTICE_TEST_SECRET_XYZ") };
     }
 }

@@ -170,19 +170,24 @@ pub type CallbackFn = extern "C" fn(
     out_len: *mut c_int,
 ) -> *mut c_char;
 
+/// # Safety
+/// `ptr` must be valid for `len` bytes.
 pub(crate) unsafe fn read_json_str(ptr: *const c_char, len: c_int) -> Option<String> {
     if ptr.is_null() || len <= 0 {
         return None;
     }
-    let slice = std::slice::from_raw_parts(ptr as *const u8, len as usize);
+    let slice = unsafe { std::slice::from_raw_parts(ptr as *const u8, len as usize) };
     std::str::from_utf8(slice).ok().map(|s| s.to_string())
 }
 
+/// # Safety
+/// `ptr` must be valid for `len` bytes.
 pub(crate) unsafe fn decode_json<T: DeserializeOwned>(
     ptr: *const c_char,
     len: c_int,
 ) -> Result<T, String> {
-    let s = read_json_str(ptr, len).ok_or_else(|| "null or empty JSON input".to_string())?;
+    let s = unsafe { read_json_str(ptr, len) }
+        .ok_or_else(|| "null or empty JSON input".to_string())?;
     serde_json::from_str(&s).map_err(|e| e.to_string())
 }
 
@@ -216,7 +221,7 @@ pub(crate) fn marshal_result_global<T: Serialize>(value: &T) -> LatticeBuffer {
 }
 
 pub(crate) unsafe fn parse_spec(ptr: *const c_char, len: c_int) -> Result<Spec, String> {
-    let s = read_json_str(ptr, len).ok_or_else(|| "null spec JSON".to_string())?;
+    let s = unsafe { read_json_str(ptr, len) }.ok_or_else(|| "null spec JSON".to_string())?;
     let spec: Spec = serde_json::from_str(&s).map_err(|e| format!("spec parse error: {}", e))?;
     let result = Compiler::default_pipeline().compile(&spec);
     if !result.is_valid {
@@ -648,7 +653,7 @@ pub(crate) unsafe fn extract_actor(
     if ptr.is_null() || len <= 0 {
         return default_actor();
     }
-    match decode_json::<lattice_runtime::query::Actor>(ptr, len) {
+    match unsafe { decode_json::<lattice_runtime::query::Actor>(ptr, len) } {
         Ok(a) => a,
         Err(_) => default_actor(),
     }
@@ -663,14 +668,14 @@ pub(crate) fn default_actor() -> lattice_runtime::query::Actor {
 }
 
 pub(crate) unsafe fn parse_api_name(ptr: *const c_char) -> Result<ApiName, String> {
-    CStr::from_ptr(ptr)
+    unsafe { CStr::from_ptr(ptr) }
         .to_str()
         .map_err(|e| e.to_string())
         .and_then(|s| s.parse::<ApiName>().map_err(|e| e.to_string()))
 }
 
 /// Return the last error message as a heap-allocated C string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn lattice_last_error() -> *mut c_char {
     let ht = lock_handles!(or return std::ptr::null_mut());
     if ht.last_error.is_empty() {
@@ -686,10 +691,10 @@ pub extern "C" fn lattice_last_error() -> *mut c_char {
 ///
 /// # Safety
 /// `ptr` must have been returned by this library and not already freed.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_string_free(ptr: *mut c_char) {
     if !ptr.is_null() {
-        drop(CString::from_raw(ptr));
+        drop(unsafe { CString::from_raw(ptr) });
     }
 }
 
@@ -697,10 +702,12 @@ pub unsafe extern "C" fn lattice_string_free(ptr: *mut c_char) {
 ///
 /// # Safety
 /// `buf` must have been returned by this library and not already freed.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_buffer_free(buf: LatticeBuffer) {
     if !buf.data.is_null() && buf.len > 0 {
-        let slice = std::slice::from_raw_parts_mut(buf.data as *mut u8, buf.len as usize);
-        drop(Box::from_raw(slice as *mut [u8]));
+        unsafe {
+            let slice = std::slice::from_raw_parts_mut(buf.data as *mut u8, buf.len as usize);
+            drop(Box::from_raw(slice as *mut [u8]));
+        }
     }
 }

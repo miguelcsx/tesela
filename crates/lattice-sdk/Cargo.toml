@@ -6,6 +6,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 description = "Code-first ontology builder SDK for Lattice."
+publish = false
 
 [dependencies]
 lattice-core = { workspace = true }

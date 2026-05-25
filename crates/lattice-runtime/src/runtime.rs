@@ -6,7 +6,7 @@ use crate::ports::*;
 use crate::query::Actor;
 use crate::ratelimit::RateLimiter;
 use crate::runtime_internal::{DefaultIdGenerator, SystemClock};
-use lattice_core::{ApiName, Error};
+use lattice_core::{lock_read, ApiName, Error};
 use lattice_ir::{ObjectSet, Spec, TransformPipeline};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -105,28 +105,56 @@ impl RuntimeOptions {
 // Runtime
 // ---------------------------------------------------------------------------
 
+/// Immutable snapshot of all ontology indexes, swapped atomically on `apply_spec`.
+pub(crate) struct OntologySnapshot {
+    pub spec: Arc<Spec>,
+    pub object_types: HashMap<ApiName, Arc<lattice_ir::ObjectType>>,
+    pub datasources: HashMap<ApiName, Arc<lattice_ir::Datasource>>,
+    pub actions: HashMap<ApiName, Arc<lattice_ir::ActionType>>,
+    pub agents: HashMap<ApiName, Arc<lattice_ir::Agent>>,
+    pub policies: HashMap<ApiName, Arc<lattice_ir::PolicyRule>>,
+    pub links: HashMap<ApiName, Arc<lattice_ir::LinkType>>,
+    pub roles: HashMap<ApiName, Arc<lattice_ir::Role>>,
+    pub object_sets: HashMap<ApiName, Arc<ObjectSet>>,
+    pub pipelines: HashMap<ApiName, Arc<TransformPipeline>>,
+    pub artifact_types: HashMap<ApiName, Arc<lattice_ir::ArtifactType>>,
+    pub upload_flows: HashMap<ApiName, Arc<lattice_ir::UploadFlow>>,
+    pub job_types: HashMap<ApiName, Arc<lattice_ir::JobType>>,
+    pub event_types: HashMap<ApiName, Arc<lattice_ir::EventType>>,
+    pub capability_grants: HashMap<ApiName, Arc<lattice_ir::CapabilityGrant>>,
+    pub aggregate_views: HashMap<ApiName, Arc<lattice_ir::AggregateView>>,
+}
+
+impl OntologySnapshot {
+    pub(crate) fn build(spec: Spec) -> Self {
+        Self {
+            object_types: Runtime::index_object_types(&spec),
+            datasources: Runtime::index_datasources(&spec),
+            actions: Runtime::index_actions(&spec),
+            agents: Runtime::index_agents(&spec),
+            policies: Runtime::index_policies(&spec),
+            links: Runtime::index_links(&spec),
+            roles: Runtime::index_roles(&spec),
+            object_sets: Runtime::index_object_sets(&spec),
+            pipelines: Runtime::index_pipelines(&spec),
+            artifact_types: Runtime::index_artifact_types(&spec),
+            upload_flows: Runtime::index_upload_flows(&spec),
+            job_types: Runtime::index_job_types(&spec),
+            event_types: Runtime::index_event_types(&spec),
+            capability_grants: Runtime::index_capability_grants(&spec),
+            aggregate_views: Runtime::index_aggregate_views(&spec),
+            spec: Arc::new(spec),
+        }
+    }
+}
+
 /// The main Lattice runtime.
 ///
-/// The lookup maps use `Arc<T>` values so that per-request lookups clone a
-/// pointer (8 bytes) rather than the full IR struct.  On `apply_spec` each
-/// map is replaced atomically under its own write-lock.
+/// All ontology indexes live behind a single `RwLock<Arc<OntologySnapshot>>`
+/// so that `apply_spec` swaps every index atomically. Per-request reads clone
+/// the `Arc` (8 bytes) then access the snapshot without contention.
 pub struct Runtime {
-    pub(crate) spec: RwLock<Arc<Spec>>,
-    pub(crate) object_types: RwLock<HashMap<ApiName, Arc<lattice_ir::ObjectType>>>,
-    pub(crate) datasources: RwLock<HashMap<ApiName, Arc<lattice_ir::Datasource>>>,
-    pub(crate) actions: RwLock<HashMap<ApiName, Arc<lattice_ir::ActionType>>>,
-    pub(crate) agents: RwLock<HashMap<ApiName, Arc<lattice_ir::Agent>>>,
-    pub(crate) policies: RwLock<HashMap<ApiName, Arc<lattice_ir::PolicyRule>>>,
-    pub(crate) links: RwLock<HashMap<ApiName, Arc<lattice_ir::LinkType>>>,
-    pub(crate) roles: RwLock<HashMap<ApiName, Arc<lattice_ir::Role>>>,
-    pub(crate) object_sets: RwLock<HashMap<ApiName, Arc<ObjectSet>>>,
-    pub(crate) pipelines: RwLock<HashMap<ApiName, Arc<TransformPipeline>>>,
-    pub(crate) artifact_types: RwLock<HashMap<ApiName, Arc<lattice_ir::ArtifactType>>>,
-    pub(crate) upload_flows: RwLock<HashMap<ApiName, Arc<lattice_ir::UploadFlow>>>,
-    pub(crate) job_types: RwLock<HashMap<ApiName, Arc<lattice_ir::JobType>>>,
-    pub(crate) event_types: RwLock<HashMap<ApiName, Arc<lattice_ir::EventType>>>,
-    pub(crate) capability_grants: RwLock<HashMap<ApiName, Arc<lattice_ir::CapabilityGrant>>>,
-    pub(crate) aggregate_views: RwLock<HashMap<ApiName, Arc<lattice_ir::AggregateView>>>,
+    pub(crate) ontology: RwLock<Arc<OntologySnapshot>>,
 
     pub(crate) backend_registry: Option<Arc<dyn BackendRegistry>>,
     pub(crate) policy_evaluator: Option<Arc<dyn PolicyEvaluator>>,
@@ -165,6 +193,13 @@ pub struct Runtime {
 impl Runtime {
     /// Create a new runtime from a compiled spec and options.
     pub fn new(spec: Spec, opts: RuntimeOptions) -> Result<Arc<Self>, Error> {
+        if opts.allow_dev_defaults {
+            tracing::warn!(
+                "Runtime created with allow_dev_defaults=true; \
+                 policy and audit are disabled — do not use in production"
+            );
+        }
+
         if opts.audit_sink.is_none() && !opts.allow_dev_defaults {
             return Err(Error::validation(
                 "audit_sink is required; use RuntimeOptions::dev() only for local tests/examples",
@@ -176,39 +211,10 @@ impl Runtime {
             ));
         }
 
-        let object_types = Self::index_object_types(&spec);
-        let datasources = Self::index_datasources(&spec);
-        let actions = Self::index_actions(&spec);
-        let agents = Self::index_agents(&spec);
-        let policies = Self::index_policies(&spec);
-        let links = Self::index_links(&spec);
-        let roles = Self::index_roles(&spec);
-        let object_sets = Self::index_object_sets(&spec);
-        let pipelines = Self::index_pipelines(&spec);
-        let artifact_types = Self::index_artifact_types(&spec);
-        let upload_flows = Self::index_upload_flows(&spec);
-        let job_types = Self::index_job_types(&spec);
-        let event_types = Self::index_event_types(&spec);
-        let capability_grants = Self::index_capability_grants(&spec);
-        let aggregate_views = Self::index_aggregate_views(&spec);
+        let snapshot = OntologySnapshot::build(spec);
 
         let rt = Arc::new(Self {
-            spec: RwLock::new(Arc::new(spec)),
-            object_types: RwLock::new(object_types),
-            datasources: RwLock::new(datasources),
-            actions: RwLock::new(actions),
-            agents: RwLock::new(agents),
-            policies: RwLock::new(policies),
-            links: RwLock::new(links),
-            roles: RwLock::new(roles),
-            object_sets: RwLock::new(object_sets),
-            pipelines: RwLock::new(pipelines),
-            artifact_types: RwLock::new(artifact_types),
-            upload_flows: RwLock::new(upload_flows),
-            job_types: RwLock::new(job_types),
-            event_types: RwLock::new(event_types),
-            capability_grants: RwLock::new(capability_grants),
-            aggregate_views: RwLock::new(aggregate_views),
+            ontology: RwLock::new(Arc::new(snapshot)),
             backend_registry: opts.backend_registry,
             policy_evaluator: opts.policy_evaluator,
             audit_sink: opts
@@ -249,6 +255,15 @@ impl Runtime {
             metrics_registry: opts.metrics_registry,
         });
         Ok(rt)
+    }
+
+    // -----------------------------------------------------------------------
+    // Ontology snapshot accessor
+    // -----------------------------------------------------------------------
+
+    /// Cheaply clone the current ontology snapshot (`Arc` bump only).
+    pub(crate) fn ontology(&self) -> Result<Arc<OntologySnapshot>, Error> {
+        Ok(Arc::clone(&*lock_read(&self.ontology)?))
     }
 
     // -----------------------------------------------------------------------

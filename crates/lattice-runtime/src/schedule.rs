@@ -6,8 +6,9 @@
 
 use crate::ports::Scheduler;
 use crate::query::WorkItem;
-use lattice_core::Error;
+use lattice_core::{lock_mutex, Error};
 use std::collections::{BTreeSet, HashMap};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -142,6 +143,9 @@ struct Job {
     task: WorkItem,
 }
 
+/// Maximum number of jobs allowed by default.
+const DEFAULT_MAX_JOBS: usize = 1024;
+
 /// In-memory cron scheduler that fires registered jobs in a background thread.
 ///
 /// The scheduler polls at 1-second resolution.  Jobs whose cron spec matches
@@ -152,6 +156,18 @@ struct Job {
 pub struct MemoryCronScheduler {
     jobs: Arc<Mutex<HashMap<String, Job>>>,
     counter: Mutex<u64>,
+    stop: Arc<AtomicBool>,
+    handle: Mutex<Option<thread::JoinHandle<()>>>,
+    max_jobs: AtomicUsize,
+}
+
+impl Drop for MemoryCronScheduler {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::Relaxed);
+        if let Some(handle) = self.handle.lock().ok().and_then(|mut g| g.take()) {
+            let _ = handle.join();
+        }
+    }
 }
 
 impl MemoryCronScheduler {
@@ -166,12 +182,14 @@ impl MemoryCronScheduler {
     {
         let jobs: Arc<Mutex<HashMap<String, Job>>> = Arc::new(Mutex::new(HashMap::new()));
         let jobs_clone = jobs.clone();
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop_clone = stop.clone();
 
-        thread::Builder::new()
+        let handle = thread::Builder::new()
             .name("lattice-cron".to_string())
             .spawn(move || {
                 let mut last_minute: Option<u32> = None;
-                loop {
+                while !stop_clone.load(Ordering::Relaxed) {
                     thread::sleep(Duration::from_secs(1));
                     let now = chrono::Utc::now();
                     use chrono::Timelike;
@@ -180,7 +198,7 @@ impl MemoryCronScheduler {
                         continue;
                     }
                     last_minute = Some(minute);
-                    let map = jobs_clone.lock().unwrap_or_else(|e| e.into_inner());
+                    let Ok(map) = jobs_clone.lock() else { continue };
                     for job in map.values() {
                         if job.spec.matches_utc(&now) {
                             handler(job.task.clone());
@@ -193,31 +211,42 @@ impl MemoryCronScheduler {
         Arc::new(Self {
             jobs,
             counter: Mutex::new(0),
+            stop,
+            handle: Mutex::new(Some(handle)),
+            max_jobs: AtomicUsize::new(DEFAULT_MAX_JOBS),
         })
     }
 
-    fn next_id(&self) -> String {
-        let mut c = self.counter.lock().unwrap_or_else(|e| e.into_inner());
+    /// Override the maximum number of registered jobs (default: 1024).
+    pub fn set_max_jobs(&self, limit: usize) {
+        self.max_jobs.store(limit, Ordering::Relaxed);
+    }
+
+    fn next_id(&self) -> Result<String, Error> {
+        let mut c = lock_mutex(&self.counter)?;
         *c += 1;
-        format!("cron_{}", *c)
+        Ok(format!("cron_{}", *c))
     }
 }
 
 impl Scheduler for MemoryCronScheduler {
     fn schedule(&self, cron: &str, task: WorkItem) -> Result<String, Error> {
         let spec = CronSpec::parse(cron)?;
-        let id = self.next_id();
-        self.jobs
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(id.clone(), Job { spec, task });
+        let id = self.next_id()?;
+        let mut jobs = lock_mutex(&self.jobs)?;
+        let max = self.max_jobs.load(Ordering::Relaxed);
+        if jobs.len() >= max {
+            return Err(Error::validation(format!(
+                "cron job limit reached ({}); cancel existing jobs or increase max_jobs",
+                max
+            )));
+        }
+        jobs.insert(id.clone(), Job { spec, task });
         Ok(id)
     }
 
     fn cancel(&self, job_id: &str) -> Result<(), Error> {
-        self.jobs
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
+        lock_mutex(&self.jobs)?
             .remove(job_id)
             .map(|_| ())
             .ok_or_else(|| Error::not_found("cron job", job_id))

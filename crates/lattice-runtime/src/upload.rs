@@ -9,7 +9,7 @@
 
 use crate::ports::AuditSink;
 use crate::query::AuditRecord;
-use lattice_core::{ApiName, Error};
+use lattice_core::{lock_mutex, ApiName, Error};
 use lattice_ir::Record;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
@@ -126,9 +126,9 @@ impl BufferedUploadManager {
 
     /// Stage `record` for upload, flushing automatically when batch is full.
     pub fn push(&self, record: Record) -> Result<(), Error> {
-        let mut pending = self.pending.lock().unwrap_or_else(|e| e.into_inner());
+        let mut pending = lock_mutex(&self.pending)?;
         pending.records.push(record);
-        self.status.lock().unwrap_or_else(|e| e.into_inner()).total += 1;
+        lock_mutex(&self.status)?.total += 1;
 
         if pending.records.len() >= self.batch_size {
             let batch: Vec<Record> = pending.records.drain(..).collect();
@@ -145,7 +145,7 @@ impl BufferedUploadManager {
 
     /// Flush any remaining buffered records to the backend.
     pub fn flush_all(&self) -> Result<(), Error> {
-        let mut pending = self.pending.lock().unwrap_or_else(|e| e.into_inner());
+        let mut pending = lock_mutex(&self.pending)?;
         if pending.records.is_empty() {
             return Ok(());
         }
@@ -160,16 +160,13 @@ impl BufferedUploadManager {
     }
 
     /// Return a snapshot of current upload progress.
-    pub fn status(&self) -> UploadStatus {
-        self.status
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone()
+    pub fn status(&self) -> Result<UploadStatus, Error> {
+        Ok(lock_mutex(&self.status)?.clone())
     }
 
     fn do_flush(&self, req: UploadRequest) -> Result<(), Error> {
         let result = self.port.flush(req)?;
-        let mut status = self.status.lock().unwrap_or_else(|e| e.into_inner());
+        let mut status = lock_mutex(&self.status)?;
         status.written += result.written;
         status.failed += result.errors.len() as i64;
         status.batches_flushed += 1;
@@ -254,7 +251,7 @@ mod tests {
         mgr.push(record()).unwrap(); // flush
         mgr.push(record()).unwrap();
         mgr.flush_all().unwrap();
-        let s = mgr.status();
+        let s = mgr.status().unwrap();
         assert_eq!(s.total, 3);
         assert_eq!(s.written, 3);
         assert_eq!(s.batches_flushed, 2);

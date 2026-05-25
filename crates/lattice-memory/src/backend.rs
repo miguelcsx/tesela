@@ -1,7 +1,7 @@
 //! MemoryBackend struct, Backend, Searcher, Getter, and Mutator implementations.
 
 use crate::{apply_sort, filter, resolve_offset};
-use lattice_core::{ApiName, Error, Value};
+use lattice_core::{lock_read, lock_write, ApiName, Error, Value};
 use lattice_ir::{MutationResult, Page, Record, Spec};
 use lattice_runtime::{
     ports::{Backend, Getter, Mutator, Searcher},
@@ -28,8 +28,9 @@ impl MemoryBackend {
     }
 
     /// Update the spec used for link traversal mappings.
-    pub fn set_spec(&self, spec: Spec) {
-        *self.spec.write().unwrap_or_else(|e| e.into_inner()) = Some(spec);
+    pub fn set_spec(&self, spec: Spec) -> Result<(), Error> {
+        *lock_write(&self.spec)? = Some(spec);
+        Ok(())
     }
 
     pub(crate) fn pk_key(pk: &Value) -> String {
@@ -106,7 +107,7 @@ impl Backend for MemoryBackend {
 
 impl Searcher for MemoryBackend {
     fn search(&self, object_type: &ApiName, query: &Query) -> Result<Page, Error> {
-        let store = self.store.read().unwrap_or_else(|e| e.into_inner());
+        let store = lock_read(&self.store)?;
         let type_store = match store.get(object_type) {
             Some(s) => s,
             None => {
@@ -152,7 +153,7 @@ impl Searcher for MemoryBackend {
 
 impl Getter for MemoryBackend {
     fn get(&self, object_type: &ApiName, pk: &Value) -> Result<Option<Record>, Error> {
-        let store = self.store.read().unwrap_or_else(|e| e.into_inner());
+        let store = lock_read(&self.store)?;
         let key = Self::pk_key(pk);
         Ok(store.get(object_type).and_then(|t| t.get(&key)).cloned())
     }
@@ -169,7 +170,7 @@ impl Mutator for MemoryBackend {
                     values: values.clone(),
                 };
 
-                let mut store = self.store.write().unwrap_or_else(|e| e.into_inner());
+                let mut store = lock_write(&self.store)?;
                 let type_store = store.entry(object_type.clone()).or_default();
 
                 if type_store.contains_key(&pk_key) {
@@ -190,7 +191,7 @@ impl Mutator for MemoryBackend {
                 values,
             } => {
                 let pk_key = Self::pk_key(primary_key);
-                let mut store = self.store.write().unwrap_or_else(|e| e.into_inner());
+                let mut store = lock_write(&self.store)?;
                 let type_store = store.entry(object_type.clone()).or_default();
 
                 match type_store.get_mut(&pk_key) {
@@ -209,7 +210,7 @@ impl Mutator for MemoryBackend {
 
             Mutation::Delete { primary_key } => {
                 let pk_key = Self::pk_key(primary_key);
-                let mut store = self.store.write().unwrap_or_else(|e| e.into_inner());
+                let mut store = lock_write(&self.store)?;
                 let removed = store
                     .get_mut(object_type)
                     .and_then(|t| t.remove(&pk_key))
@@ -228,7 +229,7 @@ impl Mutator for MemoryBackend {
                     values: values.clone(),
                 };
 
-                let mut store = self.store.write().unwrap_or_else(|e| e.into_inner());
+                let mut store = lock_write(&self.store)?;
                 store
                     .entry(object_type.clone())
                     .or_default()

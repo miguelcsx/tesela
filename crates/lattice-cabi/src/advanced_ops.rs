@@ -18,7 +18,7 @@ fn runtime_from_handle(handle: u64) -> Result<std::sync::Arc<lattice_runtime::Ru
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_vector_search_json(
     handle: u64,
     actor_json: *const c_char,
@@ -34,8 +34,8 @@ pub unsafe extern "C" fn lattice_runtime_vector_search_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let body: serde_json::Value = match decode_json(query_json, query_len) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let body: serde_json::Value = match unsafe { decode_json(query_json, query_len) } {
         Ok(v) => v,
         Err(e) => {
             ht.set_error(&e);
@@ -84,7 +84,7 @@ pub unsafe extern "C" fn lattice_runtime_vector_search_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_issue_capability_json(
     handle: u64,
     actor_json: *const c_char,
@@ -100,8 +100,8 @@ pub unsafe extern "C" fn lattice_runtime_issue_capability_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let name = match parse_api_name(grant_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let name = match unsafe { parse_api_name(grant_name) } {
         Ok(n) => n,
         Err(e) => {
             set_last_error(&e);
@@ -109,7 +109,7 @@ pub unsafe extern "C" fn lattice_runtime_issue_capability_json(
         }
     };
     let body: std::collections::BTreeMap<String, Value> = if body_len > 0 {
-        match decode_json(body_json, body_len) {
+        match unsafe { decode_json(body_json, body_len) } {
             Ok(v) => v,
             Err(e) => {
                 set_last_error(&e);
@@ -132,7 +132,7 @@ pub unsafe extern "C" fn lattice_runtime_issue_capability_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_authorize_artifact_read_json(
     handle: u64,
     actor_json: *const c_char,
@@ -149,8 +149,8 @@ pub unsafe extern "C" fn lattice_runtime_authorize_artifact_read_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let name = match parse_api_name(artifact_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let name = match unsafe { parse_api_name(artifact_name) } {
         Ok(n) => n,
         Err(e) => {
             set_last_error(&e);
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn lattice_runtime_authorize_artifact_read_json(
         }
     };
     let body: std::collections::BTreeMap<String, Value> = if body_len > 0 {
-        match decode_json(body_json, body_len) {
+        match unsafe { decode_json(body_json, body_len) } {
             Ok(v) => v,
             Err(e) => {
                 set_last_error(&e);
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn lattice_runtime_authorize_artifact_read_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_initiate_upload_flow_json(
     handle: u64,
     actor_json: *const c_char,
@@ -198,8 +198,8 @@ pub unsafe extern "C" fn lattice_runtime_initiate_upload_flow_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let name = match parse_api_name(flow_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let name = match unsafe { parse_api_name(flow_name) } {
         Ok(n) => n,
         Err(e) => {
             set_last_error(&e);
@@ -207,7 +207,7 @@ pub unsafe extern "C" fn lattice_runtime_initiate_upload_flow_json(
         }
     };
     let body: std::collections::BTreeMap<String, Value> = if body_len > 0 {
-        match decode_json(body_json, body_len) {
+        match unsafe { decode_json(body_json, body_len) } {
             Ok(v) => v,
             Err(e) => {
                 set_last_error(&e);
@@ -230,7 +230,7 @@ pub unsafe extern "C" fn lattice_runtime_initiate_upload_flow_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_start_job_json(
     handle: u64,
     actor_json: *const c_char,
@@ -246,8 +246,8 @@ pub unsafe extern "C" fn lattice_runtime_start_job_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let name = match parse_api_name(job_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let name = match unsafe { parse_api_name(job_name) } {
         Ok(n) => n,
         Err(e) => {
             set_last_error(&e);
@@ -255,7 +255,7 @@ pub unsafe extern "C" fn lattice_runtime_start_job_json(
         }
     };
     let body: serde_json::Value = if body_len > 0 {
-        match decode_json(body_json, body_len) {
+        match unsafe { decode_json(body_json, body_len) } {
             Ok(v) => v,
             Err(e) => {
                 set_last_error(&e);
@@ -287,7 +287,7 @@ pub unsafe extern "C" fn lattice_runtime_start_job_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_complete_upload_flow_json(
     handle: u64,
     actor_json: *const c_char,
@@ -303,15 +303,15 @@ pub unsafe extern "C" fn lattice_runtime_complete_upload_flow_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let name = match parse_api_name(flow_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let name = match unsafe { parse_api_name(flow_name) } {
         Ok(n) => n,
         Err(e) => {
             set_last_error(&e);
             return LatticeBuffer::empty();
         }
     };
-    let body: serde_json::Value = match decode_json(body_json, body_len) {
+    let body: serde_json::Value = match unsafe { decode_json(body_json, body_len) } {
         Ok(v) => v,
         Err(e) => {
             set_last_error(&e);
@@ -332,7 +332,7 @@ pub unsafe extern "C" fn lattice_runtime_complete_upload_flow_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_load_upload_flow_json(
     handle: u64,
     actor_json: *const c_char,
@@ -348,15 +348,15 @@ pub unsafe extern "C" fn lattice_runtime_load_upload_flow_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let name = match parse_api_name(flow_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let name = match unsafe { parse_api_name(flow_name) } {
         Ok(n) => n,
         Err(e) => {
             set_last_error(&e);
             return LatticeBuffer::empty();
         }
     };
-    let body: serde_json::Value = match decode_json(body_json, body_len) {
+    let body: serde_json::Value = match unsafe { decode_json(body_json, body_len) } {
         Ok(v) => v,
         Err(e) => {
             set_last_error(&e);
@@ -385,7 +385,7 @@ pub unsafe extern "C" fn lattice_runtime_load_upload_flow_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_aggregate_view_json(
     handle: u64,
     actor_json: *const c_char,
@@ -399,8 +399,8 @@ pub unsafe extern "C" fn lattice_runtime_aggregate_view_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let name = match parse_api_name(view_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let name = match unsafe { parse_api_name(view_name) } {
         Ok(n) => n,
         Err(e) => {
             set_last_error(&e);
@@ -420,7 +420,7 @@ pub unsafe extern "C" fn lattice_runtime_aggregate_view_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_resolve_object_set_json(
     handle: u64,
     actor_json: *const c_char,
@@ -435,8 +435,8 @@ pub unsafe extern "C" fn lattice_runtime_resolve_object_set_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let name = match parse_api_name(set_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let name = match unsafe { parse_api_name(set_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
@@ -456,7 +456,7 @@ pub unsafe extern "C" fn lattice_runtime_resolve_object_set_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_compose_object_sets_json(
     handle: u64,
     actor_json: *const c_char,
@@ -472,8 +472,8 @@ pub unsafe extern "C" fn lattice_runtime_compose_object_sets_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let body: serde_json::Value = match decode_json(body_json, body_len) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let body: serde_json::Value = match unsafe { decode_json(body_json, body_len) } {
         Ok(v) => v,
         Err(e) => {
             ht.set_error(&e);
@@ -511,7 +511,7 @@ pub unsafe extern "C" fn lattice_runtime_compose_object_sets_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_execute_pipeline_json(
     handle: u64,
     actor_json: *const c_char,
@@ -528,8 +528,8 @@ pub unsafe extern "C" fn lattice_runtime_execute_pipeline_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let name = match parse_api_name(pipeline_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let name = match unsafe { parse_api_name(pipeline_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
@@ -537,7 +537,7 @@ pub unsafe extern "C" fn lattice_runtime_execute_pipeline_json(
         }
     };
     let body: serde_json::Value = if body_len > 0 {
-        match decode_json(body_json, body_len) {
+        match unsafe { decode_json(body_json, body_len) } {
             Ok(v) => v,
             Err(e) => {
                 ht.set_error(&e);
@@ -564,7 +564,7 @@ pub unsafe extern "C" fn lattice_runtime_execute_pipeline_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_get_lineage_json(
     handle: u64,
     actor_json: *const c_char,
@@ -582,15 +582,15 @@ pub unsafe extern "C" fn lattice_runtime_get_lineage_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let obj_name = match parse_api_name(object_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let obj_name = match unsafe { parse_api_name(object_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
             return LatticeBuffer::empty();
         }
     };
-    let pk: serde_json::Value = match decode_json(pk_json, pk_len) {
+    let pk: serde_json::Value = match unsafe { decode_json(pk_json, pk_len) } {
         Ok(v) => v,
         Err(e) => {
             ht.set_error(&e);
@@ -611,7 +611,7 @@ pub unsafe extern "C" fn lattice_runtime_get_lineage_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_cross_search_json(
     handle: u64,
     actor_json: *const c_char,
@@ -627,8 +627,8 @@ pub unsafe extern "C" fn lattice_runtime_cross_search_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let body: Vec<serde_json::Value> = match decode_json(queries_json, queries_len) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let body: Vec<serde_json::Value> = match unsafe { decode_json(queries_json, queries_len) } {
         Ok(v) => v,
         Err(e) => {
             ht.set_error(&e);
@@ -690,7 +690,7 @@ pub unsafe extern "C" fn lattice_runtime_cross_search_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_create_branch_json(
     handle: u64,
     actor_json: *const c_char,
@@ -705,8 +705,8 @@ pub unsafe extern "C" fn lattice_runtime_create_branch_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let display_str = CStr::from_ptr(display).to_str().unwrap_or("").to_string();
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let display_str = unsafe { CStr::from_ptr(display) }.to_str().unwrap_or("").to_string();
     match rt.create_branch(&actor, &display_str) {
         Ok(branch) => marshal_result(&branch, &mut ht),
         Err(e) => {
@@ -720,7 +720,7 @@ pub unsafe extern "C" fn lattice_runtime_create_branch_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_update_branch_spec_json(
     handle: u64,
     actor_json: *const c_char,
@@ -737,9 +737,9 @@ pub unsafe extern "C" fn lattice_runtime_update_branch_spec_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let bid = CStr::from_ptr(branch_id).to_str().unwrap_or("").to_string();
-    let spec: lattice_ir::Spec = match decode_json(spec_json, spec_len) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let bid = unsafe { CStr::from_ptr(branch_id) }.to_str().unwrap_or("").to_string();
+    let spec: lattice_ir::Spec = match unsafe { decode_json(spec_json, spec_len) } {
         Ok(s) => s,
         Err(e) => {
             ht.set_error(&e);
@@ -759,7 +759,7 @@ pub unsafe extern "C" fn lattice_runtime_update_branch_spec_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_merge_branch_json(
     handle: u64,
     actor_json: *const c_char,
@@ -774,8 +774,8 @@ pub unsafe extern "C" fn lattice_runtime_merge_branch_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let bid = CStr::from_ptr(branch_id).to_str().unwrap_or("").to_string();
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let bid = unsafe { CStr::from_ptr(branch_id) }.to_str().unwrap_or("").to_string();
     match rt.merge_branch(&actor, &bid) {
         Ok(diff) => marshal_result(
             &serde_json::json!({
@@ -797,7 +797,7 @@ pub unsafe extern "C" fn lattice_runtime_merge_branch_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_list_branches_json(handle: u64) -> LatticeBuffer {
     let mut ht = lock_handles!(or return LatticeBuffer::empty());
     let rt = match ht.get(handle).cloned() {
@@ -820,7 +820,7 @@ pub unsafe extern "C" fn lattice_runtime_list_branches_json(handle: u64) -> Latt
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_apply_spec_with_migration_json(
     handle: u64,
     spec_json: *const c_char,
@@ -834,7 +834,7 @@ pub unsafe extern "C" fn lattice_runtime_apply_spec_with_migration_json(
             return LatticeBuffer::empty();
         }
     };
-    let spec: lattice_ir::Spec = match decode_json(spec_json, spec_len) {
+    let spec: lattice_ir::Spec = match unsafe { decode_json(spec_json, spec_len) } {
         Ok(s) => s,
         Err(e) => {
             ht.set_error(&e);
@@ -862,7 +862,7 @@ pub unsafe extern "C" fn lattice_runtime_apply_spec_with_migration_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_schema_graph_json(handle: u64) -> LatticeBuffer {
     let mut ht = lock_handles!(or return LatticeBuffer::empty());
     let rt = match ht.get(handle).cloned() {
@@ -872,7 +872,13 @@ pub unsafe extern "C" fn lattice_runtime_schema_graph_json(handle: u64) -> Latti
             return LatticeBuffer::empty();
         }
     };
-    let spec = rt.spec();
+    let spec = match rt.spec() {
+        Ok(s) => s,
+        Err(e) => {
+            ht.set_error(&e.to_string());
+            return LatticeBuffer::empty();
+        }
+    };
     let nodes: Vec<String> = spec
         .object_types
         .iter()

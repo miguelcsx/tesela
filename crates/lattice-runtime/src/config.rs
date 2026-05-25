@@ -3,7 +3,7 @@
 //! [`ConfigSource`] is the agnostic port; adapters for YAML files, Consul KV,
 //! or AWS AppConfig can implement it directly.
 
-use lattice_core::Error;
+use lattice_core::{lock_read, lock_write, Error};
 use std::collections::BTreeMap;
 use std::sync::RwLock;
 
@@ -180,16 +180,13 @@ impl<S: ConfigSource> CachedConfigSource<S> {
 impl<S: ConfigSource> ConfigSource for CachedConfigSource<S> {
     fn get(&self, key: &str) -> Result<Option<String>, Error> {
         {
-            let cache = self.cache.read().unwrap_or_else(|e| e.into_inner());
+            let cache = lock_read(&self.cache)?;
             if let Some(v) = cache.get(key) {
                 return Ok(v.clone());
             }
         }
         let v = self.inner.get(key)?;
-        self.cache
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(key.to_string(), v.clone());
+        lock_write(&self.cache)?.insert(key.to_string(), v.clone());
         Ok(v)
     }
 }
@@ -243,9 +240,9 @@ mod tests {
 
     #[test]
     fn env_config_source_maps_key() {
-        std::env::set_var("LATTICE_SERVER_PORT", "9090");
+        unsafe { std::env::set_var("LATTICE_SERVER_PORT", "9090") };
         let s = EnvConfigSource::with_prefix("LATTICE");
         assert_eq!(s.get("server.port").unwrap(), Some("9090".to_string()));
-        std::env::remove_var("LATTICE_SERVER_PORT");
+        unsafe { std::env::remove_var("LATTICE_SERVER_PORT") };
     }
 }

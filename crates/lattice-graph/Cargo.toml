@@ -6,6 +6,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 description = "Schema graph analysis for Lattice ontologies: cycles, paths, impact analysis."
+publish = false
 
 [dependencies]
 lattice-core = { workspace = true }

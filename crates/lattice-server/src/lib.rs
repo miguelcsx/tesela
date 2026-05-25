@@ -10,7 +10,7 @@
 mod handlers;
 mod types;
 
-pub use types::{CorsConfig, ServerOptions, TlsConfig};
+pub use types::{CorsConfig, ServerOptions};
 
 use axum::{
     http::{HeaderValue, StatusCode},
@@ -118,10 +118,16 @@ impl Server {
 
     fn build_cors_layer(&self) -> CorsLayer {
         match &self.opts.cors {
-            None => CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods(Any)
-                .allow_headers(Any),
+            None => {
+                tracing::warn!(
+                    "no CORS policy configured — allowing all origins; \
+                     set ServerOptions.cors for production"
+                );
+                CorsLayer::new()
+                    .allow_origin(Any)
+                    .allow_methods(Any)
+                    .allow_headers(Any)
+            }
             Some(cfg) => {
                 let mut layer = CorsLayer::new();
 
@@ -154,6 +160,9 @@ impl Server {
     }
 
     /// Start the server and listen on the given address (e.g. `"0.0.0.0:8080"`).
+    ///
+    /// The server binds plain HTTP. For HTTPS, deploy behind a reverse proxy
+    /// (e.g. nginx, Caddy, or a cloud load balancer) that terminates TLS.
     pub async fn serve(self, addr: &str) -> Result<(), Box<dyn std::error::Error>> {
         let addr: SocketAddr = addr.parse()?;
         let router = self.router();

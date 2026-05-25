@@ -6,7 +6,6 @@ use crate::runtime::Runtime;
 use lattice_core::{ApiName, Error, Operation, Value};
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 impl Runtime {
     /// Evaluate policy and return the full decision.
@@ -146,8 +145,9 @@ impl Runtime {
         };
         self.audit_sink.write_audit(record)?;
 
-        let workspace_name = lock_r(&self.spec)
-            .map(|g| g.workspace.api_name.to_string())
+        let workspace_name = self
+            .ontology()
+            .map(|snap| snap.spec.workspace.api_name.to_string())
             .unwrap_or_default();
         let event = Event {
             id: self.id_generator.new_id("evt"),
@@ -262,15 +262,6 @@ pub(crate) fn record_mutation_lineage(
     }
 }
 
-pub(crate) fn lock_r<T>(lock: &RwLock<T>) -> Result<std::sync::RwLockReadGuard<'_, T>, Error> {
-    lock.read()
-        .map_err(|_| Error::internal("runtime state lock poisoned"))
-}
-
-pub(crate) fn lock_w<T>(lock: &RwLock<T>) -> Result<std::sync::RwLockWriteGuard<'_, T>, Error> {
-    lock.write()
-        .map_err(|_| Error::internal("runtime state lock poisoned"))
-}
 
 /// Default ID generator using UUID v4.
 pub struct DefaultIdGenerator;

@@ -2,7 +2,7 @@
 
 use crate::query::*;
 use crate::runtime::Runtime;
-use crate::runtime_internal::{apply_redactions, lock_r};
+use crate::runtime_internal::apply_redactions;
 use lattice_core::{ApiName, Error, Operation, Value};
 use lattice_ir::{AggregateResult, ExplainPlan, Page, Record};
 use std::collections::BTreeMap;
@@ -21,7 +21,9 @@ impl Runtime {
         let decision =
             self.authorize_with_decision(actor, Operation::Search, "object_type", object_name)?;
 
-        let ot = lock_r(&self.object_types)?
+        let snap = self.ontology()?;
+        let ot = snap
+            .object_types
             .get(object_name)
             .cloned()
             .ok_or_else(|| Error::not_found("object_type", object_name))?;
@@ -83,7 +85,9 @@ impl Runtime {
         let decision =
             self.authorize_with_decision(actor, Operation::Read, "object_type", object_name)?;
 
-        let ot = lock_r(&self.object_types)?
+        let snap = self.ontology()?;
+        let ot = snap
+            .object_types
             .get(object_name)
             .cloned()
             .ok_or_else(|| Error::not_found("object_type", object_name))?;
@@ -124,7 +128,9 @@ impl Runtime {
         let decision =
             self.authorize_with_decision(actor, Operation::Traverse, "link_type", link_name)?;
 
-        let link = lock_r(&self.links)?
+        let snap = self.ontology()?;
+        let link = snap
+            .links
             .get(link_name)
             .cloned()
             .ok_or_else(|| Error::not_found("link_type", link_name))?;
@@ -171,7 +177,9 @@ impl Runtime {
     ) -> Result<AggregateResult, Error> {
         self.authorize_with_decision(actor, Operation::Aggregate, "object_type", object_name)?;
 
-        let ot = lock_r(&self.object_types)?
+        let snap = self.ontology()?;
+        let ot = snap
+            .object_types
             .get(object_name)
             .cloned()
             .ok_or_else(|| Error::not_found("object_type", object_name))?;
@@ -223,7 +231,9 @@ impl Runtime {
         query: Query,
     ) -> Result<ExplainPlan, Error> {
         self.authorize_with_decision(actor, Operation::Search, "object_type", object_name)?;
-        let ot = lock_r(&self.object_types)?
+        let snap = self.ontology()?;
+        let ot = snap
+            .object_types
             .get(object_name)
             .cloned()
             .ok_or_else(|| Error::not_found("object_type", object_name))?;

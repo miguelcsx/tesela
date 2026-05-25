@@ -2,7 +2,6 @@
 
 use crate::query::*;
 use crate::runtime::Runtime;
-use crate::runtime_internal::lock_r;
 use lattice_core::{ApiName, Error, Operation, Value};
 use std::collections::BTreeMap;
 
@@ -16,7 +15,9 @@ impl Runtime {
         constraints: BTreeMap<String, Value>,
     ) -> Result<CapabilityToken, Error> {
         self.authorize_with_decision(actor, Operation::Execute, "capability_grant", grant_name)?;
-        let grant = lock_r(&self.capability_grants)?
+        let snap = self.ontology()?;
+        let grant = snap
+            .capability_grants
             .get(grant_name)
             .cloned()
             .ok_or_else(|| Error::not_found("capability_grant", grant_name))?;
@@ -106,7 +107,9 @@ impl Runtime {
             capability,
             operation_params: params.clone(),
         })?;
-        let artifact = lock_r(&self.artifact_types)?
+        let snap = self.ontology()?;
+        let artifact = snap
+            .artifact_types
             .get(artifact_name)
             .cloned()
             .ok_or_else(|| Error::not_found("artifact_type", artifact_name))?;
@@ -177,7 +180,9 @@ impl Runtime {
             capability,
             operation_params: params.clone(),
         })?;
-        let flow = lock_r(&self.upload_flows)?
+        let snap = self.ontology()?;
+        let flow = snap
+            .upload_flows
             .get(flow_name)
             .cloned()
             .ok_or_else(|| Error::not_found("upload_flow", flow_name))?;
@@ -202,7 +207,9 @@ impl Runtime {
         path: &str,
     ) -> Result<ObjectMetadata, Error> {
         self.authorize_with_decision(actor, Operation::Upload, "upload_flow", flow_name)?;
-        let _flow = lock_r(&self.upload_flows)?
+        let snap = self.ontology()?;
+        let _flow = snap
+            .upload_flows
             .get(flow_name)
             .cloned()
             .ok_or_else(|| Error::not_found("upload_flow", flow_name))?;
@@ -225,7 +232,9 @@ impl Runtime {
         load_id: Option<String>,
     ) -> Result<lattice_ir::UploadResult, Error> {
         self.authorize_with_decision(actor, Operation::Upload, "upload_flow", flow_name)?;
-        let flow = lock_r(&self.upload_flows)?
+        let snap = self.ontology()?;
+        let flow = snap
+            .upload_flows
             .get(flow_name)
             .cloned()
             .ok_or_else(|| Error::not_found("upload_flow", flow_name))?;
@@ -233,7 +242,8 @@ impl Runtime {
             .target_object_type
             .as_ref()
             .ok_or_else(|| Error::validation("upload_flow has no target_object_type"))?;
-        let ot = lock_r(&self.object_types)?
+        let ot = snap
+            .object_types
             .get(object_type)
             .cloned()
             .ok_or_else(|| Error::not_found("object_type", object_type))?;
@@ -271,7 +281,9 @@ impl Runtime {
         load_id: &str,
     ) -> Result<(), Error> {
         self.authorize_with_decision(actor, Operation::Upload, "upload_flow", flow_name)?;
-        let flow = lock_r(&self.upload_flows)?
+        let snap = self.ontology()?;
+        let flow = snap
+            .upload_flows
             .get(flow_name)
             .cloned()
             .ok_or_else(|| Error::not_found("upload_flow", flow_name))?;
@@ -279,7 +291,8 @@ impl Runtime {
             .target_object_type
             .as_ref()
             .ok_or_else(|| Error::validation("upload_flow has no target_object_type"))?;
-        let ot = lock_r(&self.object_types)?
+        let ot = snap
+            .object_types
             .get(object_type)
             .cloned()
             .ok_or_else(|| Error::not_found("object_type", object_type))?;
@@ -312,7 +325,9 @@ impl Runtime {
             capability: None,
             operation_params: input.clone(),
         })?;
-        let job = lock_r(&self.job_types)?
+        let snap = self.ontology()?;
+        let job = snap
+            .job_types
             .get(job_name)
             .cloned()
             .ok_or_else(|| Error::not_found("job_type", job_name))?;
@@ -352,7 +367,7 @@ impl Runtime {
                 let event = Event {
                     id: self.id_generator.new_id("evt"),
                     kind: "job_started".to_string(),
-                    workspace: self.spec().workspace.api_name.to_string(),
+                    workspace: snap.spec.workspace.api_name.to_string(),
                     object_type: None,
                     actor_user_id: actor.user_id.clone(),
                     occurred_at: self.clock.now().to_rfc3339(),
@@ -394,14 +409,16 @@ impl Runtime {
         correlation_id: Option<String>,
     ) -> Result<String, Error> {
         self.authorize_with_decision(actor, Operation::Execute, "event_type", event_name)?;
-        let event_type = lock_r(&self.event_types)?
+        let snap = self.ontology()?;
+        let event_type = snap
+            .event_types
             .get(event_name)
             .cloned()
             .ok_or_else(|| Error::not_found("event_type", event_name))?;
         let event = Event {
             id: self.id_generator.new_id("evt"),
             kind: event_name.to_string(),
-            workspace: self.spec().workspace.api_name.to_string(),
+            workspace: snap.spec.workspace.api_name.to_string(),
             object_type: None,
             actor_user_id: actor.user_id.clone(),
             occurred_at: self.clock.now().to_rfc3339(),
@@ -427,7 +444,9 @@ impl Runtime {
         actor: &Actor,
         view_name: &ApiName,
     ) -> Result<lattice_ir::AggregateResult, Error> {
-        let view = lock_r(&self.aggregate_views)?
+        let snap = self.ontology()?;
+        let view = snap
+            .aggregate_views
             .get(view_name)
             .cloned()
             .ok_or_else(|| Error::not_found("aggregate_view", view_name))?;

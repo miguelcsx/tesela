@@ -137,6 +137,12 @@ pub struct HealthStatus {
     pub spec_version: String,
     /// Workspace name.
     pub workspace: String,
+    /// Number of registered datasources.
+    pub datasource_count: usize,
+    /// Number of active policy rules.
+    pub policy_count: usize,
+    /// Number of defined roles.
+    pub role_count: usize,
 }
 
 /// Capability advertisement.

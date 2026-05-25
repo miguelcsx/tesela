@@ -2,7 +2,7 @@
 
 use crate::ports::AuditSink;
 use crate::query::AuditRecord;
-use lattice_core::Error;
+use lattice_core::{lock_mutex, Error};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -29,12 +29,8 @@ impl VecAuditSink {
     }
 
     /// Drain all records.
-    pub fn drain(&self) -> Vec<AuditRecord> {
-        self.records
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .drain(..)
-            .collect()
+    pub fn drain(&self) -> Result<Vec<AuditRecord>, Error> {
+        Ok(lock_mutex(&self.records)?.drain(..).collect())
     }
 }
 
@@ -46,10 +42,7 @@ impl Default for VecAuditSink {
 
 impl AuditSink for VecAuditSink {
     fn write_audit(&self, record: AuditRecord) -> Result<(), Error> {
-        self.records
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .push(record);
+        lock_mutex(&self.records)?.push(record);
         Ok(())
     }
 }
@@ -98,9 +91,10 @@ impl Default for BufferedAuditConfig {
 /// channel is full. Tests can opt into dropping records by setting
 /// [`AuditOverflowPolicy::Drop`].
 pub struct BufferedAuditSink {
-    tx: std::sync::mpsc::SyncSender<AuditRecord>,
+    tx: Option<std::sync::mpsc::SyncSender<AuditRecord>>,
     drop_count: Arc<Mutex<u64>>,
     overflow_policy: AuditOverflowPolicy,
+    handle: Option<std::thread::JoinHandle<()>>,
 }
 
 impl BufferedAuditSink {
@@ -110,7 +104,7 @@ impl BufferedAuditSink {
         let drop_count = Arc::new(Mutex::new(0u64));
 
         let drop_count_bg = drop_count.clone();
-        std::thread::Builder::new()
+        let handle = std::thread::Builder::new()
             .name("lattice-audit-flush".to_string())
             .spawn(move || {
                 let mut batch: Vec<AuditRecord> = Vec::with_capacity(config.batch_size);
@@ -139,32 +133,50 @@ impl BufferedAuditSink {
             .expect("failed to spawn audit flush thread");
 
         Self {
-            tx,
+            tx: Some(tx),
             drop_count,
             overflow_policy: config.overflow_policy,
+            handle: Some(handle),
         }
     }
 
     /// Number of records dropped due to a full channel.
-    pub fn drop_count(&self) -> u64 {
-        *self.drop_count.lock().unwrap_or_else(|e| e.into_inner())
+    pub fn drop_count(&self) -> Result<u64, Error> {
+        Ok(*lock_mutex(&self.drop_count)?)
     }
 
     fn flush_batch(sink: &dyn AuditSink, batch: &mut Vec<AuditRecord>, drops: &Mutex<u64>) {
         for rec in batch.drain(..) {
             if let Err(_e) = sink.write_audit(rec) {
-                *drops.lock().unwrap_or_else(|e| e.into_inner()) += 1;
+                if let Ok(mut count) = drops.lock() {
+                    *count += 1;
+                }
             }
+        }
+    }
+}
+
+impl Drop for BufferedAuditSink {
+    fn drop(&mut self) {
+        drop(self.tx.take());
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
         }
     }
 }
 
 impl AuditSink for BufferedAuditSink {
     fn write_audit(&self, record: AuditRecord) -> Result<(), Error> {
-        match self.tx.try_send(record) {
+        let tx = self
+            .tx
+            .as_ref()
+            .ok_or_else(|| Error::internal("audit sink shut down"))?;
+        match tx.try_send(record) {
             Ok(()) => Ok(()),
             Err(std::sync::mpsc::TrySendError::Full(_)) => {
-                *self.drop_count.lock().unwrap_or_else(|e| e.into_inner()) += 1;
+                if let Ok(mut count) = self.drop_count.lock() {
+                    *count += 1;
+                }
                 match self.overflow_policy {
                     AuditOverflowPolicy::Drop => Ok(()),
                     AuditOverflowPolicy::Error => Err(Error::internal("audit buffer full")),

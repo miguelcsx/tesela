@@ -187,8 +187,8 @@ impl SchemaGraph {
 
         let mut queue: VecDeque<NodeIndex> = in_degree
             .iter()
-            .filter(|(&_, &deg)| deg == 0)
-            .map(|(&idx, _)| idx)
+            .filter(|(_, deg)| **deg == 0)
+            .map(|(idx, _)| *idx)
             .collect();
 
         let mut sorted = Vec::with_capacity(n);
@@ -207,8 +207,8 @@ impl SchemaGraph {
         if sorted.len() != n {
             let remaining: Vec<String> = in_degree
                 .iter()
-                .filter(|(&_, &deg)| deg > 0)
-                .filter_map(|(&idx, _)| self.index_to_name.get(&idx).map(|n| n.to_string()))
+                .filter(|(_, deg)| **deg > 0)
+                .filter_map(|(idx, _)| self.index_to_name.get(idx).map(|n| n.to_string()))
                 .collect();
             return Err(Diagnostic::error(
                 DiagnosticCode::InvalidLink,

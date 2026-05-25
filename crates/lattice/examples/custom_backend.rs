@@ -117,7 +117,7 @@ fn main() {
     // Register the custom backend.
     let registry = DefaultBackendRegistry::new();
     let backend = Arc::new(HardcodedBackend);
-    registry.register(ApiName::new_unchecked("hardcoded"), backend);
+    registry.register(ApiName::new_unchecked("hardcoded"), backend).unwrap();
     let registry_dyn: Arc<dyn BackendRegistry> = registry;
 
     let runtime = Runtime::new(

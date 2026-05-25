@@ -6,6 +6,7 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 description = "Core primitives for Lattice: identifiers, errors, diagnostics, and domain enums."
+publish = false
 
 [dependencies]
 thiserror = { workspace = true }

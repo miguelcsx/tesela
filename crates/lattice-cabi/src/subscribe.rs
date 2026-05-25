@@ -12,7 +12,7 @@ use std::time::Duration;
 ///
 /// # Safety
 /// `object_name` must be a valid null-terminated C string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_subscribe_json(
     handle: u64,
     _actor_json: *const c_char,
@@ -30,7 +30,7 @@ pub unsafe extern "C" fn lattice_runtime_subscribe_json(
     let obj = if object_name.is_null() {
         None
     } else {
-        match parse_api_name(object_name) {
+        match unsafe { parse_api_name(object_name) } {
             Ok(n) => Some(n),
             Err(e) => {
                 ht.set_error(&e);
@@ -53,7 +53,7 @@ pub unsafe extern "C" fn lattice_runtime_subscribe_json(
 ///
 /// # Safety
 /// `object_name` must be a valid null-terminated C string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_subscribe_changes_json(
     handle: u64,
     _actor_json: *const c_char,
@@ -68,7 +68,7 @@ pub unsafe extern "C" fn lattice_runtime_subscribe_changes_json(
             return 0;
         }
     };
-    let obj = match parse_api_name(object_name) {
+    let obj = match unsafe { parse_api_name(object_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
@@ -92,7 +92,7 @@ pub unsafe extern "C" fn lattice_runtime_subscribe_changes_json(
 /// * `-1`  — block indefinitely until an event arrives.
 ///
 /// An empty buffer with no error means timeout / no event.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_subscribe_poll(
     sub_handle: u64,
     timeout_ms: c_int,
@@ -147,7 +147,7 @@ pub unsafe extern "C" fn lattice_runtime_subscribe_poll(
 }
 
 /// Close and drop a subscription.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_subscribe_close(sub_handle: u64) {
     let mut ht = lock_handles!(or return);
     ht.remove_sub(sub_handle);

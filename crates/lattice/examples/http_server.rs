@@ -53,7 +53,7 @@ async fn main() {
     assert!(result.is_valid, "compile failed: {:?}", result.diagnostics);
 
     let registry = DefaultBackendRegistry::new();
-    registry.register(ApiName::new_unchecked("memory"), MemoryBackend::new());
+    registry.register(ApiName::new_unchecked("memory"), MemoryBackend::new()).unwrap();
     let registry_dyn: Arc<dyn lattice::runtime::ports::BackendRegistry> = registry;
 
     let runtime = Arc::new(

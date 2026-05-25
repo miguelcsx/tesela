@@ -47,11 +47,12 @@ impl CAbiBackend {
         if resp_ptr.is_null() || out_len <= 0 {
             return Err(Error::adapter("callback returned null or empty response"));
         }
-        let slice = std::slice::from_raw_parts(resp_ptr as *const u8, out_len as usize);
+        let slice =
+            unsafe { std::slice::from_raw_parts(resp_ptr as *const u8, out_len as usize) };
         let json_str = std::str::from_utf8(slice).map_err(|e| Error::adapter(e.to_string()))?;
         let payload: serde_json::Value =
             serde_json::from_str(json_str).map_err(|e| Error::adapter(e.to_string()))?;
-        libc::free(resp_ptr as *mut libc::c_void);
+        unsafe { libc::free(resp_ptr as *mut libc::c_void) };
         if let Some(message) = payload
             .get("error")
             .and_then(|e| e.get("message"))
