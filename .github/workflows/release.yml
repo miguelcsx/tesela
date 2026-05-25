@@ -14,37 +14,41 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            goos: linux
-            goarch: amd64
+            target: x86_64-unknown-linux-gnu
+            artifact: liblattice.so
           - os: ubuntu-latest
-            goos: linux
-            goarch: arm64
+            target: aarch64-unknown-linux-gnu
+            artifact: liblattice.so
           - os: macos-latest
-            goos: darwin
-            goarch: amd64
+            target: x86_64-apple-darwin
+            artifact: liblattice.dylib
           - os: macos-latest
-            goos: darwin
-            goarch: arm64
+            target: aarch64-apple-darwin
+            artifact: liblattice.dylib
           - os: windows-latest
-            goos: windows
-            goarch: amd64
+            target: x86_64-pc-windows-msvc
+            artifact: lattice.dll
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          go-version: '1.23'
-      - name: Build C ABI
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cross-compilation tools
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
-          go build -tags cabi -buildmode=c-shared -ldflags "-s -w" -o dist/liblattice-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goos == 'windows' && '.dll' || (matrix.goos == 'darwin' && '.dylib' || '.so') }} ./pkg/lattice/cabi
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Build C ABI library
+        run: cargo build --release --target ${{ matrix.target }} -p lattice-cabi
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: liblattice-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: dist/liblattice-*
+          name: liblattice-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/${{ matrix.artifact }}
 
   release:
     needs: build
@@ -59,10 +63,10 @@ jobs:
       - name: Generate SHA-256 manifest
         run: |
           cd dist
-          sha256sum liblattice-* > manifest.sha256
+          sha256sum * > manifest.sha256
           cat manifest.sha256
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/liblattice-*,dist/manifest.sha256
+          files: dist/*
           generate_release_notes: true
