@@ -27,8 +27,8 @@ pub unsafe extern "C" fn lattice_runtime_agent_start_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let name = match parse_api_name(agent_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let name = match unsafe { parse_api_name(agent_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
@@ -36,7 +36,7 @@ pub unsafe extern "C" fn lattice_runtime_agent_start_json(
         }
     };
     let input: serde_json::Value = if input_len > 0 {
-        match decode_json(input_json, input_len) {
+        match unsafe { decode_json(input_json, input_len) } {
             Ok(v) => v,
             Err(e) => {
                 ht.set_error(&e);
@@ -72,7 +72,7 @@ pub unsafe extern "C" fn lattice_runtime_agent_get_run_json(
             return LatticeBuffer::empty();
         }
     };
-    let rid = match CStr::from_ptr(run_id).to_str() {
+    let rid = match unsafe { CStr::from_ptr(run_id) }.to_str() {
         Ok(s) => s.to_string(),
         Err(e) => {
             ht.set_error(&e.to_string());
@@ -138,7 +138,7 @@ pub unsafe extern "C" fn lattice_runtime_capabilities_json(handle: u64) -> Latti
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_callback_free(ptr: *mut c_char) {
     if !ptr.is_null() {
-        libc::free(ptr as *mut c_void);
+        unsafe { libc::free(ptr as *mut c_void) };
     }
 }
 
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn lattice_runtime_register_backend(
     if ht.get(handle).is_none() {
         return c_error_string("invalid runtime handle");
     }
-    let at = match CStr::from_ptr(adapter_type).to_str() {
+    let at = match unsafe { CStr::from_ptr(adapter_type) }.to_str() {
         Ok(s) => s.to_string(),
         Err(e) => return c_error_string(&e.to_string()),
     };
@@ -191,7 +191,7 @@ pub unsafe extern "C" fn lattice_runtime_register_action_handler(
     if ht.get(handle).is_none() {
         return c_error_string("invalid runtime handle");
     }
-    let k = match CStr::from_ptr(kind).to_str() {
+    let k = match unsafe { CStr::from_ptr(kind) }.to_str() {
         Ok(s) => s.to_string(),
         Err(e) => return c_error_string(&e.to_string()),
     };
@@ -220,7 +220,7 @@ pub unsafe extern "C" fn lattice_runtime_register_custom_tool(
     if ht.get(handle).is_none() {
         return c_error_string("invalid runtime handle");
     }
-    let n = match CStr::from_ptr(name).to_str() {
+    let n = match unsafe { CStr::from_ptr(name) }.to_str() {
         Ok(s) => s.to_string(),
         Err(e) => return c_error_string(&e.to_string()),
     };
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn lattice_runtime_register_object_store(
     if ht.get(handle).is_none() {
         return c_error_string("invalid runtime handle");
     }
-    let key = match CStr::from_ptr(name).to_str() {
+    let key = match unsafe { CStr::from_ptr(name) }.to_str() {
         Ok("") => "default".to_string(),
         Ok(s) => s.to_string(),
         Err(e) => return c_error_string(&e.to_string()),
@@ -279,7 +279,7 @@ pub unsafe extern "C" fn lattice_runtime_register_message_bus(
     if ht.get(handle).is_none() {
         return c_error_string("invalid runtime handle");
     }
-    let key = match CStr::from_ptr(name).to_str() {
+    let key = match unsafe { CStr::from_ptr(name) }.to_str() {
         Ok("") => "default".to_string(),
         Ok(s) => s.to_string(),
         Err(e) => return c_error_string(&e.to_string()),
@@ -309,7 +309,7 @@ pub unsafe extern "C" fn lattice_runtime_register_run_store(
     if ht.get(handle).is_none() {
         return c_error_string("invalid runtime handle");
     }
-    let key = match CStr::from_ptr(name).to_str() {
+    let key = match unsafe { CStr::from_ptr(name) }.to_str() {
         Ok("") => "default".to_string(),
         Ok(s) => s.to_string(),
         Err(e) => return c_error_string(&e.to_string()),
@@ -339,7 +339,7 @@ pub unsafe extern "C" fn lattice_runtime_register_capability_issuer(
     if ht.get(handle).is_none() {
         return c_error_string("invalid runtime handle");
     }
-    let key = match CStr::from_ptr(name).to_str() {
+    let key = match unsafe { CStr::from_ptr(name) }.to_str() {
         Ok("") => "default".to_string(),
         Ok(s) => s.to_string(),
         Err(e) => return c_error_string(&e.to_string()),
@@ -369,7 +369,7 @@ pub unsafe extern "C" fn lattice_runtime_register_action(
     if ht.get(handle).is_none() {
         return c_error_string("invalid runtime handle");
     }
-    let n = match CStr::from_ptr(action_name).to_str() {
+    let n = match unsafe { CStr::from_ptr(action_name) }.to_str() {
         Ok(s) => s.to_string(),
         Err(e) => return c_error_string(&e.to_string()),
     };

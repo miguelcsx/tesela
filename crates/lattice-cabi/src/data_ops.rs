@@ -28,15 +28,15 @@ pub unsafe extern "C" fn lattice_runtime_search_json(
             }
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let obj_name = match parse_api_name(object_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let obj_name = match unsafe { parse_api_name(object_name) } {
         Ok(n) => n,
         Err(e) => {
             set_last_error(&e);
             return LatticeBuffer::empty();
         }
     };
-    let query: lattice_runtime::query::Query = match decode_json(query_json, query_len) {
+    let query: lattice_runtime::query::Query = match unsafe { decode_json(query_json, query_len) } {
         Ok(q) => q,
         Err(e) => {
             set_last_error(&e);
@@ -73,15 +73,15 @@ pub unsafe extern "C" fn lattice_runtime_get_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let obj_name = match parse_api_name(object_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let obj_name = match unsafe { parse_api_name(object_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
             return LatticeBuffer::empty();
         }
     };
-    let pk: serde_json::Value = match decode_json(pk_json, pk_len) {
+    let pk: serde_json::Value = match unsafe { decode_json(pk_json, pk_len) } {
         Ok(v) => v,
         Err(e) => {
             ht.set_error(&e);
@@ -118,15 +118,15 @@ pub unsafe extern "C" fn lattice_runtime_mutate_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let obj_name = match parse_api_name(object_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let obj_name = match unsafe { parse_api_name(object_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
             return LatticeBuffer::empty();
         }
     };
-    let mutation: lattice_runtime::query::Mutation = match decode_json(mutation_json, mutation_len)
+    let mutation: lattice_runtime::query::Mutation = match unsafe { decode_json(mutation_json, mutation_len) }
     {
         Ok(m) => m,
         Err(e) => {
@@ -164,8 +164,8 @@ pub unsafe extern "C" fn lattice_runtime_execute_action_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let name = match parse_api_name(action_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let name = match unsafe { parse_api_name(action_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn lattice_runtime_execute_action_json(
         }
     };
     let input: serde_json::Value = if input_len > 0 {
-        match decode_json(input_json, input_len) {
+        match unsafe { decode_json(input_json, input_len) } {
             Ok(v) => v,
             Err(e) => {
                 ht.set_error(&e);
@@ -199,19 +199,22 @@ pub unsafe extern "C" fn lattice_runtime_execute_action_json(
             }
         };
         let mut out_len: c_int = 0;
-        let resp_ptr = (cb.callback)(
-            cb.user_data,
-            req_json.as_ptr() as *const c_char,
-            req_json.len() as c_int,
-            &mut out_len,
-        );
+        let resp_ptr = unsafe {
+            (cb.callback)(
+                cb.user_data,
+                req_json.as_ptr() as *const c_char,
+                req_json.len() as c_int,
+                &mut out_len,
+            )
+        };
         if resp_ptr.is_null() || out_len <= 0 {
             ht.set_error("action callback returned null");
             return LatticeBuffer::empty();
         }
-        let slice = std::slice::from_raw_parts(resp_ptr as *const u8, out_len as usize);
+        let slice =
+            unsafe { std::slice::from_raw_parts(resp_ptr as *const u8, out_len as usize) };
         let buf = LatticeBuffer::from_bytes(slice.to_vec());
-        libc::free(resp_ptr as *mut c_void);
+        unsafe { libc::free(resp_ptr as *mut c_void) };
         return buf;
     }
 
@@ -245,15 +248,15 @@ pub unsafe extern "C" fn lattice_runtime_explain_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let obj_name = match parse_api_name(object_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let obj_name = match unsafe { parse_api_name(object_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
             return LatticeBuffer::empty();
         }
     };
-    let query: lattice_runtime::query::Query = match decode_json(query_json, query_len) {
+    let query: lattice_runtime::query::Query = match unsafe { decode_json(query_json, query_len) } {
         Ok(q) => q,
         Err(e) => {
             ht.set_error(&e);
@@ -290,15 +293,15 @@ pub unsafe extern "C" fn lattice_runtime_traverse_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let lname = match parse_api_name(link_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let lname = match unsafe { parse_api_name(link_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
             return LatticeBuffer::empty();
         }
     };
-    let query: lattice_runtime::query::TraversalQuery = match decode_json(query_json, query_len) {
+    let query: lattice_runtime::query::TraversalQuery = match unsafe { decode_json(query_json, query_len) } {
         Ok(q) => q,
         Err(e) => {
             ht.set_error(&e);
@@ -335,15 +338,15 @@ pub unsafe extern "C" fn lattice_runtime_aggregate_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let obj_name = match parse_api_name(object_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let obj_name = match unsafe { parse_api_name(object_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
             return LatticeBuffer::empty();
         }
     };
-    let query: lattice_runtime::query::AggregateQuery = match decode_json(query_json, query_len) {
+    let query: lattice_runtime::query::AggregateQuery = match unsafe { decode_json(query_json, query_len) } {
         Ok(q) => q,
         Err(e) => {
             ht.set_error(&e);
@@ -380,15 +383,15 @@ pub unsafe extern "C" fn lattice_runtime_rollback_upload_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = extract_actor(actor_json, actor_len);
-    let obj_name = match parse_api_name(object_name) {
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
+    let obj_name = match unsafe { parse_api_name(object_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);
             return LatticeBuffer::empty();
         }
     };
-    let body: serde_json::Value = match decode_json(body_json, body_len) {
+    let body: serde_json::Value = match unsafe { decode_json(body_json, body_len) } {
         Ok(v) => v,
         Err(e) => {
             ht.set_error(&e);

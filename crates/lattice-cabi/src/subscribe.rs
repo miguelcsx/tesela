@@ -30,7 +30,7 @@ pub unsafe extern "C" fn lattice_runtime_subscribe_json(
     let obj = if object_name.is_null() {
         None
     } else {
-        match parse_api_name(object_name) {
+        match unsafe { parse_api_name(object_name) } {
             Ok(n) => Some(n),
             Err(e) => {
                 ht.set_error(&e);
@@ -68,7 +68,7 @@ pub unsafe extern "C" fn lattice_runtime_subscribe_changes_json(
             return 0;
         }
     };
-    let obj = match parse_api_name(object_name) {
+    let obj = match unsafe { parse_api_name(object_name) } {
         Ok(n) => n,
         Err(e) => {
             ht.set_error(&e);

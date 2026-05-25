@@ -14,7 +14,7 @@ pub unsafe extern "C" fn lattice_runtime_new_from_spec_json(
     spec_json: *const c_char,
     len: c_int,
 ) -> u64 {
-    let spec = match parse_spec(spec_json, len) {
+    let spec = match unsafe { parse_spec(spec_json, len) } {
         Ok(s) => s,
         Err(e) => {
             lock_handles!(or return 0).set_error(&e);
@@ -102,7 +102,7 @@ pub unsafe extern "C" fn lattice_runtime_apply_spec_json(
             return LatticeBuffer::empty();
         }
     };
-    let new_spec = match parse_spec(spec_json, len) {
+    let new_spec = match unsafe { parse_spec(spec_json, len) } {
         Ok(s) => s,
         Err(e) => {
             ht.set_error(&e);

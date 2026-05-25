@@ -17,7 +17,6 @@
 //! `Mutex<HashMap>` maps opaque `u64` handles to `Arc<Runtime>` instances.
 
 #![allow(clippy::missing_safety_doc)]
-#![allow(unsafe_op_in_unsafe_fn)]
 
 pub mod handle;
 
