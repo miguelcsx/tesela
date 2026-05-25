@@ -155,29 +155,27 @@ impl Runtime {
     }
 
     /// Return a cloned snapshot of the current spec.
-    #[tracing::instrument(skip(self))]
-    pub fn spec(&self) -> Spec {
-        lock_r(&self.spec)
-            .map(|g| Spec::clone(&g))
-            .unwrap_or_default()
+    #[tracing::instrument(skip(self), err)]
+    pub fn spec(&self) -> Result<Spec, Error> {
+        Ok(Spec::clone(&*lock_r(&self.spec)?))
     }
 
     /// Build the schema graph for the current spec.
-    #[tracing::instrument(skip(self))]
-    pub fn schema_graph(&self) -> SchemaGraph {
-        let spec = Arc::clone(&*lock_r(&self.spec).expect("spec lock poisoned"));
-        GraphBuilder::build(&spec)
+    #[tracing::instrument(skip(self), err)]
+    pub fn schema_graph(&self) -> Result<SchemaGraph, Error> {
+        let spec = Arc::clone(&*lock_r(&self.spec)?);
+        Ok(GraphBuilder::build(&spec))
     }
 
     /// Health check.
-    #[tracing::instrument(skip(self))]
-    pub fn health(&self) -> HealthStatus {
-        let spec = self.spec();
-        HealthStatus {
+    #[tracing::instrument(skip(self), err)]
+    pub fn health(&self) -> Result<HealthStatus, Error> {
+        let spec = self.spec()?;
+        Ok(HealthStatus {
             status: "healthy".to_string(),
             spec_version: spec.version.to_string(),
             workspace: spec.workspace.api_name.to_string(),
-        }
+        })
     }
 
     /// Capability advertisement.

@@ -103,7 +103,13 @@ pub unsafe extern "C" fn lattice_runtime_health_json(handle: u64) -> LatticeBuff
             return LatticeBuffer::empty();
         }
     };
-    marshal_result(&rt.health(), &mut ht)
+    match rt.health() {
+        Ok(h) => marshal_result(&h, &mut ht),
+        Err(e) => {
+            ht.set_error(&e.to_string());
+            LatticeBuffer::empty()
+        }
+    }
 }
 
 /// Return capabilities JSON.

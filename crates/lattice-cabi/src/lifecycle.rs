@@ -68,7 +68,13 @@ pub unsafe extern "C" fn lattice_runtime_spec_json(handle: u64) -> LatticeBuffer
             return LatticeBuffer::empty();
         }
     };
-    let spec = rt.spec();
+    let spec = match rt.spec() {
+        Ok(s) => s,
+        Err(e) => {
+            ht.set_error(&e.to_string());
+            return LatticeBuffer::empty();
+        }
+    };
     match serde_json::to_vec(&spec) {
         Ok(b) => LatticeBuffer::from_bytes(b),
         Err(e) => {

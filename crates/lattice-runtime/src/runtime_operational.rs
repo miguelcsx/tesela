@@ -352,7 +352,7 @@ impl Runtime {
                 let event = Event {
                     id: self.id_generator.new_id("evt"),
                     kind: "job_started".to_string(),
-                    workspace: self.spec().workspace.api_name.to_string(),
+                    workspace: self.spec()?.workspace.api_name.to_string(),
                     object_type: None,
                     actor_user_id: actor.user_id.clone(),
                     occurred_at: self.clock.now().to_rfc3339(),
@@ -401,7 +401,7 @@ impl Runtime {
         let event = Event {
             id: self.id_generator.new_id("evt"),
             kind: event_name.to_string(),
-            workspace: self.spec().workspace.api_name.to_string(),
+            workspace: self.spec()?.workspace.api_name.to_string(),
             object_type: None,
             actor_user_id: actor.user_id.clone(),
             occurred_at: self.clock.now().to_rfc3339(),

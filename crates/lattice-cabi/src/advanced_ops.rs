@@ -872,7 +872,13 @@ pub unsafe extern "C" fn lattice_runtime_schema_graph_json(handle: u64) -> Latti
             return LatticeBuffer::empty();
         }
     };
-    let spec = rt.spec();
+    let spec = match rt.spec() {
+        Ok(s) => s,
+        Err(e) => {
+            ht.set_error(&e.to_string());
+            return LatticeBuffer::empty();
+        }
+    };
     let nodes: Vec<String> = spec
         .object_types
         .iter()

@@ -727,8 +727,10 @@ pub(crate) async fn branch_discard_handler(
 
 // -- Ontology & system -------------------------------------------------------
 
-pub(crate) async fn spec_handler(State(state): State<AppState>) -> Json<Spec> {
-    Json(state.runtime.spec())
+pub(crate) async fn spec_handler(
+    State(state): State<AppState>,
+) -> Result<Json<Spec>, ApiError> {
+    Ok(Json(state.runtime.spec()?))
 }
 
 pub(crate) async fn apply_spec_handler(
@@ -749,6 +751,6 @@ pub(crate) async fn capabilities_handler(
 
 pub(crate) async fn health_handler(
     State(state): State<AppState>,
-) -> Json<lattice_ir::HealthStatus> {
-    Json(state.runtime.health())
+) -> Result<Json<lattice_ir::HealthStatus>, ApiError> {
+    Ok(Json(state.runtime.health()?))
 }
