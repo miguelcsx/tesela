@@ -9,7 +9,7 @@ use std::os::raw::{c_char, c_int};
 ///
 /// # Safety
 /// `spec_json` must be a valid UTF-8 buffer of at least `len` bytes.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_new_from_spec_json(
     spec_json: *const c_char,
     len: c_int,
@@ -39,7 +39,7 @@ pub unsafe extern "C" fn lattice_runtime_new_from_spec_json(
 /// # Safety
 /// `handle` must be a value previously returned by
 /// [`lattice_runtime_new_from_spec_json`].
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_release(handle: u64) {
     lock_handles!(or return).remove(handle);
 }
@@ -48,7 +48,7 @@ pub unsafe extern "C" fn lattice_runtime_release(handle: u64) {
 ///
 /// # Safety
 /// `handle` must be valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_shutdown(handle: u64) -> *mut c_char {
     lock_handles!(or return std::ptr::null_mut()).remove(handle);
     std::ptr::null_mut()
@@ -58,7 +58,7 @@ pub unsafe extern "C" fn lattice_runtime_shutdown(handle: u64) -> *mut c_char {
 ///
 /// # Safety
 /// `handle` must be valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_spec_json(handle: u64) -> LatticeBuffer {
     let mut ht = lock_handles!(or return LatticeBuffer::empty());
     let rt = match ht.get(handle).cloned() {
@@ -88,7 +88,7 @@ pub unsafe extern "C" fn lattice_runtime_spec_json(handle: u64) -> LatticeBuffer
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_apply_spec_json(
     handle: u64,
     spec_json: *const c_char,

@@ -670,7 +670,7 @@ pub(crate) unsafe fn parse_api_name(ptr: *const c_char) -> Result<ApiName, Strin
 }
 
 /// Return the last error message as a heap-allocated C string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn lattice_last_error() -> *mut c_char {
     let ht = lock_handles!(or return std::ptr::null_mut());
     if ht.last_error.is_empty() {
@@ -686,7 +686,7 @@ pub extern "C" fn lattice_last_error() -> *mut c_char {
 ///
 /// # Safety
 /// `ptr` must have been returned by this library and not already freed.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_string_free(ptr: *mut c_char) {
     if !ptr.is_null() {
         drop(CString::from_raw(ptr));
@@ -697,7 +697,7 @@ pub unsafe extern "C" fn lattice_string_free(ptr: *mut c_char) {
 ///
 /// # Safety
 /// `buf` must have been returned by this library and not already freed.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_buffer_free(buf: LatticeBuffer) {
     if !buf.data.is_null() && buf.len > 0 {
         let slice = std::slice::from_raw_parts_mut(buf.data as *mut u8, buf.len as usize);

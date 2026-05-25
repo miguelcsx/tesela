@@ -10,7 +10,7 @@ use std::os::raw::{c_char, c_int, c_void};
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_agent_start_json(
     handle: u64,
     actor_json: *const c_char,
@@ -59,7 +59,7 @@ pub unsafe extern "C" fn lattice_runtime_agent_start_json(
 ///
 /// # Safety
 /// `run_id` must be a null-terminated C string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_agent_get_run_json(
     handle: u64,
     run_id: *const c_char,
@@ -93,7 +93,7 @@ pub unsafe extern "C" fn lattice_runtime_agent_get_run_json(
 ///
 /// # Safety
 /// `handle` must be valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_health_json(handle: u64) -> LatticeBuffer {
     let mut ht = lock_handles!(or return LatticeBuffer::empty());
     let rt = match ht.get(handle).cloned() {
@@ -116,7 +116,7 @@ pub unsafe extern "C" fn lattice_runtime_health_json(handle: u64) -> LatticeBuff
 ///
 /// # Safety
 /// `handle` must be valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_capabilities_json(handle: u64) -> LatticeBuffer {
     let mut ht = lock_handles!(or return LatticeBuffer::empty());
     let rt = match ht.get(handle).cloned() {
@@ -135,7 +135,7 @@ pub unsafe extern "C" fn lattice_runtime_capabilities_json(handle: u64) -> Latti
 /// `ptr` must have been returned by a callback registered via
 /// [`lattice_runtime_register_backend`], [`lattice_runtime_register_action_handler`],
 /// or [`lattice_runtime_register_custom_tool`], and not already freed.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_callback_free(ptr: *mut c_char) {
     if !ptr.is_null() {
         libc::free(ptr as *mut c_void);
@@ -151,7 +151,7 @@ pub unsafe extern "C" fn lattice_callback_free(ptr: *mut c_char) {
 ///
 /// # Safety
 /// `handle` must be valid; `adapter_type` a null-terminated C string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_register_backend(
     handle: u64,
     adapter_type: *const c_char,
@@ -180,7 +180,7 @@ pub unsafe extern "C" fn lattice_runtime_register_backend(
 ///
 /// # Safety
 /// `handle` must be valid; `kind` a null-terminated C string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_register_action_handler(
     handle: u64,
     kind: *const c_char,
@@ -209,7 +209,7 @@ pub unsafe extern "C" fn lattice_runtime_register_action_handler(
 ///
 /// # Safety
 /// `handle` must be valid; `name` a null-terminated C string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_register_custom_tool(
     handle: u64,
     name: *const c_char,
@@ -238,7 +238,7 @@ pub unsafe extern "C" fn lattice_runtime_register_custom_tool(
 ///
 /// # Safety
 /// `handle` must be valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_register_object_store(
     handle: u64,
     name: *const c_char,
@@ -268,7 +268,7 @@ pub unsafe extern "C" fn lattice_runtime_register_object_store(
 ///
 /// # Safety
 /// `handle` must be valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_register_message_bus(
     handle: u64,
     name: *const c_char,
@@ -298,7 +298,7 @@ pub unsafe extern "C" fn lattice_runtime_register_message_bus(
 ///
 /// # Safety
 /// `handle` must be valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_register_run_store(
     handle: u64,
     name: *const c_char,
@@ -328,7 +328,7 @@ pub unsafe extern "C" fn lattice_runtime_register_run_store(
 ///
 /// # Safety
 /// `handle` must be valid.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_register_capability_issuer(
     handle: u64,
     name: *const c_char,
@@ -358,7 +358,7 @@ pub unsafe extern "C" fn lattice_runtime_register_capability_issuer(
 ///
 /// # Safety
 /// `handle` must be valid; `action_name` a null-terminated C string.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_register_action(
     handle: u64,
     action_name: *const c_char,

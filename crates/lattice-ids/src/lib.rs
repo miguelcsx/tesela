@@ -26,8 +26,11 @@ static ULID_GEN: Mutex<Generator> = Mutex::new(Generator::new());
 /// entropy suffix is drawn from the OS CSPRNG via [`ulid`].  Calls within
 /// the same millisecond produce strictly increasing values (monotonic mode).
 pub fn new_ulid() -> String {
-    let mut gen = ULID_GEN.lock().unwrap_or_else(|e| e.into_inner());
-    gen.generate().unwrap_or_else(|_| Ulid::new()).to_string()
+    let mut generator = ULID_GEN.lock().unwrap_or_else(|e| e.into_inner());
+    generator
+        .generate()
+        .unwrap_or_else(|_| Ulid::new())
+        .to_string()
 }
 
 // ---------------------------------------------------------------------------
@@ -110,12 +113,12 @@ mod tests {
 
     #[test]
     fn ulid_generator_prefixes() {
-        let gen = UlidIdGenerator::new();
+        let id_gen = UlidIdGenerator::new();
         use lattice_runtime::ports::IdGenerator;
-        let id = gen.new_id("run");
+        let id = id_gen.new_id("run");
         assert!(id.starts_with("run_"), "expected prefix: {}", id);
 
-        let bare = gen.new_id("");
+        let bare = id_gen.new_id("");
         assert!(
             !bare.contains('_'),
             "no prefix should mean no underscore: {}",

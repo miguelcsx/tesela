@@ -243,9 +243,9 @@ mod tests {
 
     #[test]
     fn env_config_source_maps_key() {
-        std::env::set_var("LATTICE_SERVER_PORT", "9090");
+        unsafe { std::env::set_var("LATTICE_SERVER_PORT", "9090") };
         let s = EnvConfigSource::with_prefix("LATTICE");
         assert_eq!(s.get("server.port").unwrap(), Some("9090".to_string()));
-        std::env::remove_var("LATTICE_SERVER_PORT");
+        unsafe { std::env::remove_var("LATTICE_SERVER_PORT") };
     }
 }

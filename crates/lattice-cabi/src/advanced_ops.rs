@@ -18,7 +18,7 @@ fn runtime_from_handle(handle: u64) -> Result<std::sync::Arc<lattice_runtime::Ru
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_vector_search_json(
     handle: u64,
     actor_json: *const c_char,
@@ -84,7 +84,7 @@ pub unsafe extern "C" fn lattice_runtime_vector_search_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_issue_capability_json(
     handle: u64,
     actor_json: *const c_char,
@@ -132,7 +132,7 @@ pub unsafe extern "C" fn lattice_runtime_issue_capability_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_authorize_artifact_read_json(
     handle: u64,
     actor_json: *const c_char,
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn lattice_runtime_authorize_artifact_read_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_initiate_upload_flow_json(
     handle: u64,
     actor_json: *const c_char,
@@ -230,7 +230,7 @@ pub unsafe extern "C" fn lattice_runtime_initiate_upload_flow_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_start_job_json(
     handle: u64,
     actor_json: *const c_char,
@@ -287,7 +287,7 @@ pub unsafe extern "C" fn lattice_runtime_start_job_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_complete_upload_flow_json(
     handle: u64,
     actor_json: *const c_char,
@@ -332,7 +332,7 @@ pub unsafe extern "C" fn lattice_runtime_complete_upload_flow_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_load_upload_flow_json(
     handle: u64,
     actor_json: *const c_char,
@@ -385,7 +385,7 @@ pub unsafe extern "C" fn lattice_runtime_load_upload_flow_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_aggregate_view_json(
     handle: u64,
     actor_json: *const c_char,
@@ -420,7 +420,7 @@ pub unsafe extern "C" fn lattice_runtime_aggregate_view_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_resolve_object_set_json(
     handle: u64,
     actor_json: *const c_char,
@@ -456,7 +456,7 @@ pub unsafe extern "C" fn lattice_runtime_resolve_object_set_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_compose_object_sets_json(
     handle: u64,
     actor_json: *const c_char,
@@ -511,7 +511,7 @@ pub unsafe extern "C" fn lattice_runtime_compose_object_sets_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_execute_pipeline_json(
     handle: u64,
     actor_json: *const c_char,
@@ -564,7 +564,7 @@ pub unsafe extern "C" fn lattice_runtime_execute_pipeline_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_get_lineage_json(
     handle: u64,
     actor_json: *const c_char,
@@ -611,7 +611,7 @@ pub unsafe extern "C" fn lattice_runtime_get_lineage_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_cross_search_json(
     handle: u64,
     actor_json: *const c_char,
@@ -690,7 +690,7 @@ pub unsafe extern "C" fn lattice_runtime_cross_search_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_create_branch_json(
     handle: u64,
     actor_json: *const c_char,
@@ -720,7 +720,7 @@ pub unsafe extern "C" fn lattice_runtime_create_branch_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_update_branch_spec_json(
     handle: u64,
     actor_json: *const c_char,
@@ -759,7 +759,7 @@ pub unsafe extern "C" fn lattice_runtime_update_branch_spec_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_merge_branch_json(
     handle: u64,
     actor_json: *const c_char,
@@ -797,7 +797,7 @@ pub unsafe extern "C" fn lattice_runtime_merge_branch_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_list_branches_json(handle: u64) -> LatticeBuffer {
     let mut ht = lock_handles!(or return LatticeBuffer::empty());
     let rt = match ht.get(handle).cloned() {
@@ -820,7 +820,7 @@ pub unsafe extern "C" fn lattice_runtime_list_branches_json(handle: u64) -> Latt
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_apply_spec_with_migration_json(
     handle: u64,
     spec_json: *const c_char,
@@ -862,7 +862,7 @@ pub unsafe extern "C" fn lattice_runtime_apply_spec_with_migration_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_schema_graph_json(handle: u64) -> LatticeBuffer {
     let mut ht = lock_handles!(or return LatticeBuffer::empty());
     let rt = match ht.get(handle).cloned() {

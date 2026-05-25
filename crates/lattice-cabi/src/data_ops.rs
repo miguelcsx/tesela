@@ -9,7 +9,7 @@ use std::os::raw::{c_char, c_int, c_void};
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_search_json(
     handle: u64,
     actor_json: *const c_char,
@@ -56,7 +56,7 @@ pub unsafe extern "C" fn lattice_runtime_search_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_get_json(
     handle: u64,
     actor_json: *const c_char,
@@ -101,7 +101,7 @@ pub unsafe extern "C" fn lattice_runtime_get_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_mutate_json(
     handle: u64,
     actor_json: *const c_char,
@@ -147,7 +147,7 @@ pub unsafe extern "C" fn lattice_runtime_mutate_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_execute_action_json(
     handle: u64,
     actor_json: *const c_char,
@@ -228,7 +228,7 @@ pub unsafe extern "C" fn lattice_runtime_execute_action_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_explain_json(
     handle: u64,
     actor_json: *const c_char,
@@ -273,7 +273,7 @@ pub unsafe extern "C" fn lattice_runtime_explain_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_traverse_json(
     handle: u64,
     actor_json: *const c_char,
@@ -318,7 +318,7 @@ pub unsafe extern "C" fn lattice_runtime_traverse_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_aggregate_json(
     handle: u64,
     actor_json: *const c_char,
@@ -363,7 +363,7 @@ pub unsafe extern "C" fn lattice_runtime_aggregate_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_rollback_upload_json(
     handle: u64,
     actor_json: *const c_char,
@@ -417,7 +417,7 @@ pub unsafe extern "C" fn lattice_runtime_rollback_upload_json(
 ///
 /// # Safety
 /// All pointers must be valid for the duration of the call.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn lattice_runtime_upload_json(
     _handle: u64,
     _actor_json: *const c_char,
