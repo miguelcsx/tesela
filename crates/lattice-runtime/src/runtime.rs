@@ -5,8 +5,8 @@ use crate::crypto::Sealer;
 use crate::ports::*;
 use crate::query::Actor;
 use crate::ratelimit::RateLimiter;
-use crate::runtime_internal::{lock_r, DefaultIdGenerator, SystemClock};
-use lattice_core::{ApiName, Error};
+use crate::runtime_internal::{DefaultIdGenerator, SystemClock};
+use lattice_core::{lock_read, ApiName, Error};
 use lattice_ir::{ObjectSet, Spec, TransformPipeline};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -106,7 +106,6 @@ impl RuntimeOptions {
 // ---------------------------------------------------------------------------
 
 /// Immutable snapshot of all ontology indexes, swapped atomically on `apply_spec`.
-#[allow(dead_code)]
 pub(crate) struct OntologySnapshot {
     pub spec: Arc<Spec>,
     pub object_types: HashMap<ApiName, Arc<lattice_ir::ObjectType>>,
@@ -264,7 +263,7 @@ impl Runtime {
 
     /// Cheaply clone the current ontology snapshot (`Arc` bump only).
     pub(crate) fn ontology(&self) -> Result<Arc<OntologySnapshot>, Error> {
-        Ok(Arc::clone(&*lock_r(&self.ontology)?))
+        Ok(Arc::clone(&*lock_read(&self.ontology)?))
     }
 
     // -----------------------------------------------------------------------

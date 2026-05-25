@@ -2,7 +2,7 @@
 
 use crate::ports::{EventBus, SubscriptionBus};
 use crate::query::Event;
-use lattice_core::{ApiName, Error};
+use lattice_core::{lock_mutex, ApiName, Error};
 use std::sync::{mpsc, Mutex, RwLock};
 
 /// Event bus that discards all events.
@@ -28,12 +28,8 @@ impl VecEventBus {
     }
 
     /// Drain all events.
-    pub fn drain(&self) -> Vec<Event> {
-        self.events
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .drain(..)
-            .collect()
+    pub fn drain(&self) -> Result<Vec<Event>, Error> {
+        Ok(lock_mutex(&self.events)?.drain(..).collect())
     }
 }
 
@@ -45,10 +41,7 @@ impl Default for VecEventBus {
 
 impl EventBus for VecEventBus {
     fn publish(&self, event: Event) -> Result<(), Error> {
-        self.events
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .push(event);
+        lock_mutex(&self.events)?.push(event);
         Ok(())
     }
 }

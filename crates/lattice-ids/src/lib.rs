@@ -26,11 +26,14 @@ static ULID_GEN: Mutex<Generator> = Mutex::new(Generator::new());
 /// entropy suffix is drawn from the OS CSPRNG via [`ulid`].  Calls within
 /// the same millisecond produce strictly increasing values (monotonic mode).
 pub fn new_ulid() -> String {
-    let mut generator = ULID_GEN.lock().unwrap_or_else(|e| e.into_inner());
-    generator
-        .generate()
-        .unwrap_or_else(|_| Ulid::new())
-        .to_string()
+    let mut generator = match ULID_GEN.lock() {
+        Ok(g) => g,
+        Err(e) => e.into_inner(),
+    };
+    match generator.generate() {
+        Ok(ulid) => ulid.to_string(),
+        Err(_) => Ulid::new().to_string(),
+    }
 }
 
 // ---------------------------------------------------------------------------

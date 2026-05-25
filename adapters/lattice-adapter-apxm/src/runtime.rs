@@ -5,7 +5,6 @@ use lattice_runtime::{
 };
 
 /// APXM agent runtime that delegates to an APXM HTTP service.
-#[allow(dead_code)]
 pub struct ApxmAgentRuntime {
     base_url: String,
     client: reqwest::Client,
@@ -36,14 +35,17 @@ impl AgentRuntime for ApxmAgentRuntime {
         _input: Value,
         _actor: &Actor,
     ) -> Result<String, Error> {
-        Err(Error::unsupported(
-            "apxm start_run not yet implemented — requires APXM service",
-        ))
+        Err(Error::unsupported(format!(
+            "apxm start_run not yet implemented — requires APXM service at {}",
+            self.base_url
+        )))
     }
 
-    fn get_run(&self, _run_id: &str) -> Result<lattice_ir::AgentRun, Error> {
-        Err(Error::unsupported(
-            "apxm get_run not yet implemented — requires APXM service",
-        ))
+    fn get_run(&self, run_id: &str) -> Result<lattice_ir::AgentRun, Error> {
+        let _url = self.client.get(format!("{}/runs/{}", self.base_url, run_id));
+        Err(Error::unsupported(format!(
+            "apxm get_run not yet implemented — requires APXM service at {}",
+            self.base_url
+        )))
     }
 }

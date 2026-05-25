@@ -36,7 +36,7 @@ fn main() {
     // 2. Build a Runtime backed by MemoryBackend.
     let registry = DefaultBackendRegistry::new();
     let backend = MemoryBackend::new();
-    registry.register(ApiName::new_unchecked("memory"), backend);
+    registry.register(ApiName::new_unchecked("memory"), backend).unwrap();
     // DefaultBackendRegistry::new() already returns Arc<Self>; upcast to dyn BackendRegistry.
     let registry_dyn: Arc<dyn lattice::runtime::ports::BackendRegistry> = registry;
     let opts = RuntimeOptions {

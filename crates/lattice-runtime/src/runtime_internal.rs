@@ -6,7 +6,6 @@ use crate::runtime::Runtime;
 use lattice_core::{ApiName, Error, Operation, Value};
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 impl Runtime {
     /// Evaluate policy and return the full decision.
@@ -263,15 +262,6 @@ pub(crate) fn record_mutation_lineage(
     }
 }
 
-pub(crate) fn lock_r<T>(lock: &RwLock<T>) -> Result<std::sync::RwLockReadGuard<'_, T>, Error> {
-    lock.read()
-        .map_err(|_| Error::internal("runtime state lock poisoned"))
-}
-
-pub(crate) fn lock_w<T>(lock: &RwLock<T>) -> Result<std::sync::RwLockWriteGuard<'_, T>, Error> {
-    lock.write()
-        .map_err(|_| Error::internal("runtime state lock poisoned"))
-}
 
 /// Default ID generator using UUID v4.
 pub struct DefaultIdGenerator;

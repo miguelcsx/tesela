@@ -6,7 +6,7 @@
 
 use crate::ports::Scheduler;
 use crate::query::WorkItem;
-use lattice_core::Error;
+use lattice_core::{lock_mutex, Error};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
@@ -164,7 +164,7 @@ pub struct MemoryCronScheduler {
 impl Drop for MemoryCronScheduler {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Relaxed);
-        if let Some(handle) = self.handle.lock().unwrap_or_else(|e| e.into_inner()).take() {
+        if let Some(handle) = self.handle.lock().ok().and_then(|mut g| g.take()) {
             let _ = handle.join();
         }
     }
@@ -198,7 +198,7 @@ impl MemoryCronScheduler {
                         continue;
                     }
                     last_minute = Some(minute);
-                    let map = jobs_clone.lock().unwrap_or_else(|e| e.into_inner());
+                    let Ok(map) = jobs_clone.lock() else { continue };
                     for job in map.values() {
                         if job.spec.matches_utc(&now) {
                             handler(job.task.clone());
@@ -222,18 +222,18 @@ impl MemoryCronScheduler {
         self.max_jobs.store(limit, Ordering::Relaxed);
     }
 
-    fn next_id(&self) -> String {
-        let mut c = self.counter.lock().unwrap_or_else(|e| e.into_inner());
+    fn next_id(&self) -> Result<String, Error> {
+        let mut c = lock_mutex(&self.counter)?;
         *c += 1;
-        format!("cron_{}", *c)
+        Ok(format!("cron_{}", *c))
     }
 }
 
 impl Scheduler for MemoryCronScheduler {
     fn schedule(&self, cron: &str, task: WorkItem) -> Result<String, Error> {
         let spec = CronSpec::parse(cron)?;
-        let id = self.next_id();
-        let mut jobs = self.jobs.lock().unwrap_or_else(|e| e.into_inner());
+        let id = self.next_id()?;
+        let mut jobs = lock_mutex(&self.jobs)?;
         let max = self.max_jobs.load(Ordering::Relaxed);
         if jobs.len() >= max {
             return Err(Error::validation(format!(
@@ -246,9 +246,7 @@ impl Scheduler for MemoryCronScheduler {
     }
 
     fn cancel(&self, job_id: &str) -> Result<(), Error> {
-        self.jobs
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
+        lock_mutex(&self.jobs)?
             .remove(job_id)
             .map(|_| ())
             .ok_or_else(|| Error::not_found("cron job", job_id))

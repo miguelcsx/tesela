@@ -5,7 +5,10 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "Lattice ontology-driven application runtime — top-level facade."
+keywords.workspace = true
+categories.workspace = true
+readme.workspace = true
+description = "Ontology-driven application runtime — define object types, links, policies, actions, and agents in a declarative spec; query, mutate, and serve them over REST, GraphQL, or MCP."
 
 [dependencies]
 lattice-core = { workspace = true }

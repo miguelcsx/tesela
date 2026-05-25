@@ -6,7 +6,7 @@
 //! [`MemoryRateLimiter`] is a per-(namespace, key) token-bucket suitable for
 //! single-process deployments.
 
-use lattice_core::Error;
+use lattice_core::{lock_mutex, Error};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Instant;
@@ -103,7 +103,7 @@ impl RateLimiter for MemoryRateLimiter {
             namespace: namespace.to_string(),
             key: key.to_string(),
         };
-        let mut map = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        let mut map = lock_mutex(&self.state)?;
         let bucket = map.entry(k).or_insert_with(|| Bucket::new(self.burst));
         bucket.refill(self.rate, self.burst);
         if bucket.tokens >= 1.0 {
@@ -119,7 +119,7 @@ impl RateLimiter for MemoryRateLimiter {
             namespace: namespace.to_string(),
             key: key.to_string(),
         };
-        let mut map = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        let mut map = lock_mutex(&self.state)?;
         let bucket = map.entry(k).or_insert_with(|| Bucket::new(self.burst));
         bucket.refill(self.rate, self.burst);
         Ok(bucket.tokens.floor())

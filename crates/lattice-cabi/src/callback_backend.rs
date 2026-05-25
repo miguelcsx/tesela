@@ -38,14 +38,12 @@ impl CAbiBackend {
     ) -> Result<T, Error> {
         let req_bytes = serde_json::to_vec(req).map_err(|e| Error::adapter(e.to_string()))?;
         let mut out_len: c_int = 0;
-        let resp_ptr = unsafe {
-            (self.callback.callback)(
-                self.callback.user_data,
-                req_bytes.as_ptr() as *const c_char,
-                req_bytes.len() as c_int,
-                &mut out_len,
-            )
-        };
+        let resp_ptr = (self.callback.callback)(
+            self.callback.user_data,
+            req_bytes.as_ptr() as *const c_char,
+            req_bytes.len() as c_int,
+            &mut out_len,
+        );
         if resp_ptr.is_null() || out_len <= 0 {
             return Err(Error::adapter("callback returned null or empty response"));
         }

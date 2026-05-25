@@ -27,6 +27,9 @@ edition = "2024"
 license = "Apache-2.0"
 authors = ["Miguel Cárdenas"]
 repository = "https://github.com/miguelcsx/lattice"
+keywords = ["ontology", "runtime", "data-platform", "sdk"]
+categories = ["data-structures", "web-programming"]
+readme = "README.md"
 
 [workspace.dependencies]
 lattice-core = { path = "crates/lattice-core", version = "0.1.0" }

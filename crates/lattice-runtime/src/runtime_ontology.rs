@@ -2,8 +2,7 @@
 
 use crate::query::Actor;
 use crate::runtime::{OntologySnapshot, Runtime};
-use crate::runtime_internal::lock_w;
-use lattice_core::{ApiName, Error, Value};
+use lattice_core::{lock_write, ApiName, Error, Value};
 use lattice_graph::{GraphBuilder, SchemaGraph};
 use lattice_ir::{Branch, BranchStatus, Capabilities, HealthStatus, Spec};
 use std::collections::BTreeMap;
@@ -97,7 +96,7 @@ impl Runtime {
         }
 
         let new_snap = Arc::new(OntologySnapshot::build(new_spec));
-        *lock_w(&self.ontology)? = new_snap;
+        *lock_write(&self.ontology)? = new_snap;
 
         Ok(diff)
     }
@@ -146,6 +145,9 @@ impl Runtime {
             status: "healthy".to_string(),
             spec_version: snap.spec.version.to_string(),
             workspace: snap.spec.workspace.api_name.to_string(),
+            datasource_count: snap.datasources.len(),
+            policy_count: snap.policies.len(),
+            role_count: snap.roles.len(),
         })
     }
 

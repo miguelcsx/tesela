@@ -1,7 +1,7 @@
 //! DefaultBackendRegistry, MemoryBackendFactory, and capabilities helper.
 
 use crate::backend::MemoryBackend;
-use lattice_core::{ApiName, Error, Value};
+use lattice_core::{lock_read, lock_write, ApiName, Error, Value};
 use lattice_ir::Capabilities;
 use lattice_runtime::{
     ports::{
@@ -27,11 +27,9 @@ impl DefaultBackendRegistry {
     }
 
     /// Register a backend under a datasource name.
-    pub fn register(&self, ds_name: ApiName, backend: Arc<dyn Backend>) {
-        self.backends
-            .write()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(ds_name, backend);
+    pub fn register(&self, ds_name: ApiName, backend: Arc<dyn Backend>) -> Result<(), Error> {
+        lock_write(&self.backends)?.insert(ds_name, backend);
+        Ok(())
     }
 }
 
@@ -45,7 +43,7 @@ impl Default for DefaultBackendRegistry {
 
 impl BackendRegistry for DefaultBackendRegistry {
     fn acquire(&self, ds_name: &ApiName) -> Result<Box<dyn Backend>, Error> {
-        let backends = self.backends.read().unwrap_or_else(|e| e.into_inner());
+        let backends = lock_read(&self.backends)?;
         let backend = backends
             .get(ds_name)
             .cloned()

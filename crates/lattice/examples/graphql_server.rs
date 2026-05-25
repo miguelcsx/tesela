@@ -41,7 +41,7 @@ async fn main() {
     let spec = result.spec.unwrap();
 
     let registry = DefaultBackendRegistry::new();
-    registry.register(ApiName::new_unchecked("memory"), MemoryBackend::new());
+    registry.register(ApiName::new_unchecked("memory"), MemoryBackend::new()).unwrap();
     let registry_dyn: Arc<dyn lattice::runtime::ports::BackendRegistry> = registry;
 
     let runtime = Arc::new(

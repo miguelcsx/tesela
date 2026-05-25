@@ -10,11 +10,13 @@
 pub mod diagnostics;
 pub mod error;
 pub mod ident;
+pub mod sync;
 pub mod types;
 pub mod value;
 
 pub use diagnostics::*;
 pub use error::*;
 pub use ident::*;
+pub use sync::*;
 pub use types::*;
 pub use value::*;

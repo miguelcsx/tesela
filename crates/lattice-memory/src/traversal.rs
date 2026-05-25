@@ -2,7 +2,7 @@
 
 use crate::backend::MemoryBackend;
 use crate::{aggregate, apply_sort, filter, resolve_offset};
-use lattice_core::{ApiName, Error, Value};
+use lattice_core::{lock_read, lock_write, ApiName, Error, Value};
 use lattice_ir::{AggregateResult, ExplainPlan, Filter, Page, Record};
 use lattice_runtime::{
     ports::{Aggregator, BulkLoader, Rollbacker, SearchExplainer, Traverser},
@@ -16,7 +16,7 @@ impl Aggregator for MemoryBackend {
         object_type: &ApiName,
         query: &AggregateQuery,
     ) -> Result<AggregateResult, Error> {
-        let store = self.store.read().unwrap_or_else(|e| e.into_inner());
+        let store = lock_read(&self.store)?;
         let records: Vec<Record> = store
             .get(object_type)
             .map(|t| {
@@ -42,7 +42,7 @@ impl Aggregator for MemoryBackend {
 
 impl Traverser for MemoryBackend {
     fn traverse(&self, link_type: &ApiName, query: &TraversalQuery) -> Result<Page, Error> {
-        let spec_guard = self.spec.read().unwrap_or_else(|e| e.into_inner());
+        let spec_guard = lock_read(&self.spec)?;
         let link = spec_guard
             .as_ref()
             .and_then(|s| s.link_types.iter().find(|l| l.api_name == *link_type))
@@ -65,7 +65,7 @@ impl Traverser for MemoryBackend {
             }
         };
 
-        let store = self.store.read().unwrap_or_else(|e| e.into_inner());
+        let store = lock_read(&self.store)?;
         let source_type = &link.from;
         let source_pk_key = MemoryBackend::pk_key(&query.source_pk);
 
@@ -130,8 +130,8 @@ impl BulkLoader for MemoryBackend {
         load_id: &str,
     ) -> Result<i64, Error> {
         let count = records.len() as i64;
-        let mut store = self.store.write().unwrap_or_else(|e| e.into_inner());
-        let mut log = self.load_log.write().unwrap_or_else(|e| e.into_inner());
+        let mut store = lock_write(&self.store)?;
+        let mut log = lock_write(&self.load_log)?;
         let type_store = store.entry(object_type.clone()).or_default();
         let load_entries = log.entry(load_id.to_string()).or_default();
 
@@ -150,8 +150,8 @@ impl BulkLoader for MemoryBackend {
 
 impl Rollbacker for MemoryBackend {
     fn rollback(&self, _object_type: &ApiName, load_id: &str) -> Result<(), Error> {
-        let mut store = self.store.write().unwrap_or_else(|e| e.into_inner());
-        let mut log = self.load_log.write().unwrap_or_else(|e| e.into_inner());
+        let mut store = lock_write(&self.store)?;
+        let mut log = lock_write(&self.load_log)?;
         if let Some(entries) = log.remove(load_id) {
             for (obj_type, pk_key) in entries {
                 if let Some(type_store) = store.get_mut(&obj_type) {
@@ -165,7 +165,7 @@ impl Rollbacker for MemoryBackend {
 
 impl SearchExplainer for MemoryBackend {
     fn explain_search(&self, object_type: &ApiName, query: &Query) -> Result<ExplainPlan, Error> {
-        let store = self.store.read().unwrap_or_else(|e| e.into_inner());
+        let store = lock_read(&self.store)?;
         let total_records = store.get(object_type).map(|t| t.len()).unwrap_or(0);
         let mut steps: Vec<BTreeMap<String, Value>> = Vec::new();
 

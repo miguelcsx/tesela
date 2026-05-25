@@ -199,14 +199,12 @@ pub unsafe extern "C" fn lattice_runtime_execute_action_json(
             }
         };
         let mut out_len: c_int = 0;
-        let resp_ptr = unsafe {
-            (cb.callback)(
-                cb.user_data,
-                req_json.as_ptr() as *const c_char,
-                req_json.len() as c_int,
-                &mut out_len,
-            )
-        };
+        let resp_ptr = (cb.callback)(
+            cb.user_data,
+            req_json.as_ptr() as *const c_char,
+            req_json.len() as c_int,
+            &mut out_len,
+        );
         if resp_ptr.is_null() || out_len <= 0 {
             ht.set_error("action callback returned null");
             return LatticeBuffer::empty();

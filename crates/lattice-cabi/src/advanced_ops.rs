@@ -34,7 +34,7 @@ pub unsafe extern "C" fn lattice_runtime_vector_search_json(
             return LatticeBuffer::empty();
         }
     };
-    let actor = unsafe { unsafe { extract_actor(actor_json, actor_len) } };
+    let actor = unsafe { extract_actor(actor_json, actor_len) };
     let body: serde_json::Value = match unsafe { decode_json(query_json, query_len) } {
         Ok(v) => v,
         Err(e) => {
