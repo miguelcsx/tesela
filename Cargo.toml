@@ -1,23 +1,23 @@
 [workspace]
 members = [
-    "crates/lattice-core",
-    "crates/lattice-ir",
-    "crates/lattice-graph",
-    "crates/lattice-compiler",
-    "crates/lattice-runtime",
-    "crates/lattice-memory",
-    "crates/lattice-server",
-    "crates/lattice-graphql",
-    "crates/lattice-mcp",
-    "crates/lattice-sdk",
-    "crates/lattice-macros",
-    "crates/lattice-cabi",
-    "crates/lattice-vector",
-    "crates/lattice-telemetry",
-    "crates/lattice-ids",
-    "crates/lattice",
-    "adapters/lattice-adapter-postgres",
-    "adapters/lattice-adapter-apxm",
+    "crates/tesela-core",
+    "crates/tesela-ir",
+    "crates/tesela-graph",
+    "crates/tesela-compiler",
+    "crates/tesela-runtime",
+    "crates/tesela-memory",
+    "crates/tesela-server",
+    "crates/tesela-graphql",
+    "crates/tesela-mcp",
+    "crates/tesela-sdk",
+    "crates/tesela-macros",
+    "crates/tesela-cabi",
+    "crates/tesela-vector",
+    "crates/tesela-telemetry",
+    "crates/tesela-ids",
+    "crates/tesela",
+    "adapters/tesela-adapter-postgres",
+    "adapters/tesela-adapter-apxm",
 ]
 resolver = "3"
 
@@ -26,29 +26,29 @@ version = "0.1.0"
 edition = "2024"
 license = "Apache-2.0"
 authors = ["Miguel Cárdenas"]
-repository = "https://github.com/miguelcsx/lattice"
+repository = "https://github.com/miguelcsx/tesela"
 keywords = ["ontology", "runtime", "data-platform", "sdk"]
 categories = ["data-structures", "web-programming"]
 readme = "README.md"
 
 [workspace.dependencies]
-lattice-core = { path = "crates/lattice-core", version = "0.1.0" }
-lattice-ir = { path = "crates/lattice-ir", version = "0.1.0" }
-lattice-graph = { path = "crates/lattice-graph", version = "0.1.0" }
-lattice-compiler = { path = "crates/lattice-compiler", version = "0.1.0" }
-lattice-runtime = { path = "crates/lattice-runtime", version = "0.1.0" }
-lattice-memory = { path = "crates/lattice-memory", version = "0.1.0" }
-lattice-server = { path = "crates/lattice-server", version = "0.1.0" }
-lattice-graphql = { path = "crates/lattice-graphql", version = "0.1.0" }
-lattice-mcp = { path = "crates/lattice-mcp", version = "0.1.0" }
-lattice-sdk = { path = "crates/lattice-sdk", version = "0.1.0" }
-lattice-macros = { path = "crates/lattice-macros", version = "0.1.0" }
-lattice-cabi = { path = "crates/lattice-cabi", version = "0.1.0" }
-lattice-vector = { path = "crates/lattice-vector", version = "0.1.0" }
-lattice-telemetry = { path = "crates/lattice-telemetry", version = "0.1.0" }
-lattice-ids = { path = "crates/lattice-ids", version = "0.1.0" }
-lattice-adapter-postgres = { path = "adapters/lattice-adapter-postgres", version = "0.1.0" }
-lattice-adapter-apxm = { path = "adapters/lattice-adapter-apxm", version = "0.1.0" }
+tesela-core = { path = "crates/tesela-core", version = "0.1.0" }
+tesela-ir = { path = "crates/tesela-ir", version = "0.1.0" }
+tesela-graph = { path = "crates/tesela-graph", version = "0.1.0" }
+tesela-compiler = { path = "crates/tesela-compiler", version = "0.1.0" }
+tesela-runtime = { path = "crates/tesela-runtime", version = "0.1.0" }
+tesela-memory = { path = "crates/tesela-memory", version = "0.1.0" }
+tesela-server = { path = "crates/tesela-server", version = "0.1.0" }
+tesela-graphql = { path = "crates/tesela-graphql", version = "0.1.0" }
+tesela-mcp = { path = "crates/tesela-mcp", version = "0.1.0" }
+tesela-sdk = { path = "crates/tesela-sdk", version = "0.1.0" }
+tesela-macros = { path = "crates/tesela-macros", version = "0.1.0" }
+tesela-cabi = { path = "crates/tesela-cabi", version = "0.1.0" }
+tesela-vector = { path = "crates/tesela-vector", version = "0.1.0" }
+tesela-telemetry = { path = "crates/tesela-telemetry", version = "0.1.0" }
+tesela-ids = { path = "crates/tesela-ids", version = "0.1.0" }
+tesela-adapter-postgres = { path = "adapters/tesela-adapter-postgres", version = "0.1.0" }
+tesela-adapter-apxm = { path = "adapters/tesela-adapter-apxm", version = "0.1.0" }
 
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "json", "chrono", "uuid"] }
 

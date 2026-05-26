@@ -1,0 +1,21 @@
+[package]
+name = "tesela-compiler"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+repository.workspace = true
+description = "Compiler pipeline for Tesela ontologies: validation passes, normalization, diff, hashing."
+
+[dependencies]
+tesela-core = { workspace = true }
+tesela-ir = { workspace = true }
+tesela-graph = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+regex = { workspace = true }
+
+[dev-dependencies]

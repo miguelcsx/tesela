@@ -1,0 +1,23 @@
+[package]
+name = "tesela-cabi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+repository.workspace = true
+description = "C ABI shared library exposing the Tesela runtime for FFI consumers (Python, etc.)."
+
+[lib]
+# Compile as a C-compatible shared library.
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+tesela-core = { workspace = true }
+tesela-ir = { workspace = true }
+tesela-compiler = { workspace = true }
+tesela-runtime = { workspace = true }
+tesela-memory = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+libc = "0.2"

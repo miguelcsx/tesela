@@ -1,11 +1,11 @@
 # Security policy
 
-This document describes how to report security issues in Lattice and the
+This document describes how to report security issues in Tesela and the
 hardening guarantees the runtime ships with.
 
 ## Reporting a vulnerability
 
-Email security@lattice.example with a description of the issue, the affected
+Email security@tesela.example with a description of the issue, the affected
 version, and (when possible) a reproduction. We will acknowledge within 48
 hours and aim to publish a fix and CVE within 30 days for critical issues.
 
@@ -34,7 +34,7 @@ Please do **not** open a public GitHub issue for security reports.
   time, enforcing append-only semantics at the database level.
 * **Webhook signing**: webhook handlers sign their bodies with HMAC-SHA256
   and a configurable signing key from the secrets provider. Receivers can
-  verify the `X-Lattice-Signature` header to detect tampering or replay.
+  verify the `X-Tesela-Signature` header to detect tampering or replay.
 * **SSRF**: webhook clients honor a per-action timeout and retry budget.
   Future versions will add an outbound allowlist enforced before DNS
   resolution.

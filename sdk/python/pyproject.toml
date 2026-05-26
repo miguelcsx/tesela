@@ -1,0 +1,39 @@
+[project]
+name = "tesela-sdk"
+version = "0.1.0"
+description = "Code-first ontology builder and native runtime wrapper for Tesela."
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [{ name = "Miguel Cárdenas" }]
+readme = "README.md"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Repository = "https://github.com/miguelcsx/tesela"
+Issues = "https://github.com/miguelcsx/tesela/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "mypy>=1.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["tesela"]
+artifacts = ["tesela/libtesela_cabi*.so", "tesela/libtesela_cabi*.dylib", "tesela/tesela_cabi*.dll"]
+
+[tool.hatch.build.targets.sdist]
+include = ["tesela", "tests", "examples", "pyproject.toml", "README.md"]

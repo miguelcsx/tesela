@@ -1,0 +1,33 @@
+[package]
+name = "tesela"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme.workspace = true
+description = "Ontology-driven application runtime — define object types, links, policies, actions, and agents in a declarative spec; query, mutate, and serve them over REST, GraphQL, or MCP."
+
+[dependencies]
+tesela-core = { workspace = true }
+tesela-ir = { workspace = true }
+tesela-graph = { workspace = true }
+tesela-compiler = { workspace = true }
+tesela-runtime = { workspace = true }
+tesela-memory = { workspace = true }
+tesela-server = { workspace = true }
+tesela-graphql = { workspace = true }
+tesela-mcp = { workspace = true }
+tesela-sdk = { workspace = true, features = ["native-runtime"] }
+tesela-macros = { workspace = true, optional = true }
+
+[features]
+macros = ["dep:tesela-macros"]
+
+[dev-dependencies]
+chrono = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing-subscriber = { workspace = true }

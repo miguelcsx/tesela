@@ -1541,243 +1541,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lattice"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "lattice-compiler",
- "lattice-core",
- "lattice-graph",
- "lattice-graphql",
- "lattice-ir",
- "lattice-macros",
- "lattice-mcp",
- "lattice-memory",
- "lattice-runtime",
- "lattice-sdk",
- "lattice-server",
- "serde_json",
- "tokio",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lattice-adapter-apxm"
-version = "0.1.0"
-dependencies = [
- "lattice-core",
- "lattice-ir",
- "lattice-runtime",
- "reqwest",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "lattice-adapter-postgres"
-version = "0.1.0"
-dependencies = [
- "lattice-core",
- "lattice-ir",
- "lattice-runtime",
- "serde_json",
- "sqlx",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "lattice-cabi"
-version = "0.1.0"
-dependencies = [
- "lattice-compiler",
- "lattice-core",
- "lattice-ir",
- "lattice-memory",
- "lattice-runtime",
- "libc",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "lattice-compiler"
-version = "0.1.0"
-dependencies = [
- "hex",
- "lattice-core",
- "lattice-graph",
- "lattice-ir",
- "regex",
- "serde",
- "serde_json",
- "sha2",
-]
-
-[[package]]
-name = "lattice-core"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "regex",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "lattice-graph"
-version = "0.1.0"
-dependencies = [
- "lattice-core",
- "lattice-ir",
- "petgraph",
-]
-
-[[package]]
-name = "lattice-graphql"
-version = "0.1.0"
-dependencies = [
- "async-graphql",
- "lattice-core",
- "lattice-ir",
- "lattice-runtime",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "lattice-ids"
-version = "0.1.0"
-dependencies = [
- "lattice-runtime",
- "ulid",
- "uuid",
-]
-
-[[package]]
-name = "lattice-ir"
-version = "0.1.0"
-dependencies = [
- "hex",
- "lattice-core",
- "serde",
- "serde_json",
- "sha2",
-]
-
-[[package]]
-name = "lattice-macros"
-version = "0.1.0"
-dependencies = [
- "darling 0.20.11",
- "lattice-core",
- "lattice-ir",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "lattice-mcp"
-version = "0.1.0"
-dependencies = [
- "axum",
- "lattice-core",
- "lattice-ir",
- "lattice-runtime",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "lattice-memory"
-version = "0.1.0"
-dependencies = [
- "lattice-core",
- "lattice-ir",
- "lattice-runtime",
- "serde",
- "serde_json",
- "uuid",
-]
-
-[[package]]
-name = "lattice-runtime"
-version = "0.1.0"
-dependencies = [
- "aes-gcm",
- "base64",
- "chrono",
- "jsonschema",
- "lattice-compiler",
- "lattice-core",
- "lattice-graph",
- "lattice-ir",
- "lattice-telemetry",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "lattice-sdk"
-version = "0.1.0"
-dependencies = [
- "lattice-compiler",
- "lattice-core",
- "lattice-ir",
- "lattice-runtime",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "lattice-server"
-version = "0.1.0"
-dependencies = [
- "axum",
- "axum-server",
- "futures-util",
- "governor",
- "lattice-core",
- "lattice-ir",
- "lattice-runtime",
- "serde",
- "serde_json",
- "tokio",
- "tokio-stream",
- "tower",
- "tower-http",
- "tracing",
-]
-
-[[package]]
-name = "lattice-telemetry"
-version = "0.1.0"
-dependencies = [
- "lattice-core",
-]
-
-[[package]]
-name = "lattice-vector"
-version = "0.1.0"
-dependencies = [
- "lattice-core",
- "lattice-ir",
- "lattice-runtime",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3209,6 +2972,244 @@ dependencies = [
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "tesela"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde_json",
+ "tesela-compiler",
+ "tesela-core",
+ "tesela-graph",
+ "tesela-graphql",
+ "tesela-ir",
+ "tesela-macros",
+ "tesela-mcp",
+ "tesela-memory",
+ "tesela-runtime",
+ "tesela-sdk",
+ "tesela-server",
+ "tokio",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "tesela-adapter-apxm"
+version = "0.1.0"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tesela-core",
+ "tesela-ir",
+ "tesela-runtime",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "tesela-adapter-postgres"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "sqlx",
+ "tesela-core",
+ "tesela-ir",
+ "tesela-runtime",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "tesela-cabi"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "serde",
+ "serde_json",
+ "tesela-compiler",
+ "tesela-core",
+ "tesela-ir",
+ "tesela-memory",
+ "tesela-runtime",
+]
+
+[[package]]
+name = "tesela-compiler"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tesela-core",
+ "tesela-graph",
+ "tesela-ir",
+]
+
+[[package]]
+name = "tesela-core"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "tesela-graph"
+version = "0.1.0"
+dependencies = [
+ "petgraph",
+ "tesela-core",
+ "tesela-ir",
+]
+
+[[package]]
+name = "tesela-graphql"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "serde",
+ "serde_json",
+ "tesela-core",
+ "tesela-ir",
+ "tesela-runtime",
+]
+
+[[package]]
+name = "tesela-ids"
+version = "0.1.0"
+dependencies = [
+ "tesela-runtime",
+ "ulid",
+ "uuid",
+]
+
+[[package]]
+name = "tesela-ir"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tesela-core",
+]
+
+[[package]]
+name = "tesela-macros"
+version = "0.1.0"
+dependencies = [
+ "darling 0.20.11",
+ "proc-macro2",
+ "quote",
+ "syn",
+ "tesela-core",
+ "tesela-ir",
+]
+
+[[package]]
+name = "tesela-mcp"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "serde",
+ "serde_json",
+ "tesela-core",
+ "tesela-ir",
+ "tesela-runtime",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "tesela-memory"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tesela-core",
+ "tesela-ir",
+ "tesela-runtime",
+ "uuid",
+]
+
+[[package]]
+name = "tesela-runtime"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "base64",
+ "chrono",
+ "jsonschema",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tesela-compiler",
+ "tesela-core",
+ "tesela-graph",
+ "tesela-ir",
+ "tesela-telemetry",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "tesela-sdk"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tesela-compiler",
+ "tesela-core",
+ "tesela-ir",
+ "tesela-runtime",
+]
+
+[[package]]
+name = "tesela-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "axum-server",
+ "futures-util",
+ "governor",
+ "serde",
+ "serde_json",
+ "tesela-core",
+ "tesela-ir",
+ "tesela-runtime",
+ "tokio",
+ "tokio-stream",
+ "tower",
+ "tower-http",
+ "tracing",
+]
+
+[[package]]
+name = "tesela-telemetry"
+version = "0.1.0"
+dependencies = [
+ "tesela-core",
+]
+
+[[package]]
+name = "tesela-vector"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tesela-core",
+ "tesela-ir",
+ "tesela-runtime",
 ]
 
 [[package]]

@@ -24,5 +24,10 @@ Thumbs.db
 .env.local
 *.local.yaml
 
-# Generated SDKs
-/sdk/
+# Python SDK build artifacts
+sdk/python/tesela/*.so
+sdk/python/tesela/*.dylib
+sdk/python/tesela/*.dll
+sdk/python/dist/
+sdk/python/build/
+sdk/python/*.egg-info/
