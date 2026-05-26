@@ -1,6 +1,7 @@
 # Build output
 /bin/
 /dist/
+/target/
 *.exe
 
 # Test artifacts
@@ -25,9 +26,15 @@ Thumbs.db
 *.local.yaml
 
 # Python SDK build artifacts
+__pycache__/
+*.py[cod]
 sdk/python/tesela/*.so
 sdk/python/tesela/*.dylib
 sdk/python/tesela/*.dll
 sdk/python/dist/
 sdk/python/build/
 sdk/python/*.egg-info/
+
+# Local tool state
+.claude/
+/external/
