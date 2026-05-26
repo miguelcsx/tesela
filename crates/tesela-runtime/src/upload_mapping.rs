@@ -1,9 +1,9 @@
 //! Schema-aware upload mapping, heuristic column matching, type coercion,
 //! and post-write validation.
 
+use std::collections::BTreeMap;
 use tesela_core::{DataType, Error, Value};
 use tesela_ir::{ObjectType, Property};
-use std::collections::BTreeMap;
 
 // ---------------------------------------------------------------------------
 // Mapping engine

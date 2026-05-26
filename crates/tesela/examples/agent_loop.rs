@@ -4,6 +4,8 @@
 //! LLM provider, and running the agent loop. The mock model makes one tool
 //! call (search_product) and then returns a final answer.
 
+use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex};
 use tesela::memory::{DefaultBackendRegistry, MemoryBackend};
 use tesela::runtime::agents::DefaultAgentRuntime;
 use tesela::runtime::ports::{AgentRuntime, IdGenerator, ModelProvider};
@@ -11,8 +13,6 @@ use tesela::runtime::query::{Actor, ModelRequest, ModelResponse, Query, ToolCall
 use tesela::runtime::runtime::{Runtime, RuntimeOptions};
 use tesela::sdk::{AgentBuilder, App, ObjectTypeBuilder, PropertyBuilder};
 use tesela_core::{ApiName, DataType, Error, Value};
-use std::collections::BTreeMap;
-use std::sync::{Arc, Mutex};
 
 // ---------------------------------------------------------------------------
 // Mock ModelProvider

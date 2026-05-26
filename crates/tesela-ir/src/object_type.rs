@@ -1,8 +1,8 @@
 //! Object type, trait, property, and related configuration types.
 
-use tesela_core::{ApiName, DataType, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, DataType, Value};
 
 use crate::LineageEdge;
 

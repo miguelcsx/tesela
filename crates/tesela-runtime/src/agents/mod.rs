@@ -9,9 +9,9 @@ pub use tools::AgentOrchestrator;
 use crate::constants::*;
 use crate::ports::{Compactor, ModelProvider};
 use crate::query::{Message, ModelRequest};
-use tesela_core::{Error, Value};
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use tesela_core::{Error, Value};
 
 /// Compacts a message history when the estimated token count exceeds budget.
 ///

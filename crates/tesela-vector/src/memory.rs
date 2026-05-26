@@ -1,10 +1,10 @@
 //! In-memory brute-force vector backend.
 
+use std::collections::HashMap;
+use std::sync::RwLock;
 use tesela_core::{ApiName, Error, Value};
 use tesela_ir::Record;
 use tesela_runtime::ports::{VectorBackend, VectorResult, VectorSearchQuery};
-use std::collections::HashMap;
-use std::sync::RwLock;
 
 /// A single indexed vector entry.
 struct Entry {

@@ -1,8 +1,8 @@
 //! Object set (saved query) types.
 
-use tesela_core::{ApiName, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, Value};
 
 use crate::Filter;
 

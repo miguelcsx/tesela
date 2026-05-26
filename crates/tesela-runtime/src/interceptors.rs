@@ -2,8 +2,8 @@
 
 use crate::ports::Interceptor;
 use crate::query::InterceptorOp;
-use tesela_core::{ApiName, Error, Value};
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, Error, Value};
 
 /// A chain of interceptors.
 pub struct InterceptorChain {

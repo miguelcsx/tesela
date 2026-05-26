@@ -2,13 +2,13 @@
 
 use crate::backend::MemoryBackend;
 use crate::{aggregate, apply_sort, filter, resolve_offset};
+use std::collections::BTreeMap;
 use tesela_core::{ApiName, Error, Value, lock_read, lock_write};
 use tesela_ir::{AggregateResult, ExplainPlan, Filter, Page, Record};
 use tesela_runtime::{
     ports::{Aggregator, BulkLoader, Rollbacker, SearchExplainer, Traverser},
     query::{AggregateQuery, Query, TraversalQuery},
 };
-use std::collections::BTreeMap;
 
 impl Aggregator for MemoryBackend {
     fn aggregate(

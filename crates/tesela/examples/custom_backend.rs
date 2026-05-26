@@ -2,6 +2,8 @@
 //!
 //! This example shows the minimum required to implement a custom backend adapter.
 
+use std::collections::BTreeMap;
+use std::sync::Arc;
 use tesela::memory::DefaultBackendRegistry;
 use tesela::runtime::ports::{Backend, BackendRegistry, Getter, Mutator, Searcher};
 use tesela::runtime::query::{Actor, BackendCapabilities, Mutation, Query};
@@ -9,8 +11,6 @@ use tesela::runtime::runtime::{Runtime, RuntimeOptions};
 use tesela::sdk::{App, ObjectTypeBuilder, PropertyBuilder};
 use tesela_core::{ApiName, DataType, Error, Value};
 use tesela_ir::{MutationResult, Page, Record};
-use std::collections::BTreeMap;
-use std::sync::Arc;
 
 // ---------------------------------------------------------------------------
 // Custom backend

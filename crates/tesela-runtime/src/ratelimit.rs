@@ -6,10 +6,10 @@
 //! [`MemoryRateLimiter`] is a per-(namespace, key) token-bucket suitable for
 //! single-process deployments.
 
-use tesela_core::{Error, lock_mutex};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Instant;
+use tesela_core::{Error, lock_mutex};
 
 // ---------------------------------------------------------------------------
 // Port trait

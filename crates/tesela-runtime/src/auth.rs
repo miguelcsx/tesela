@@ -5,9 +5,9 @@
 
 use crate::ports::ActorResolver;
 use crate::query::{Actor, RequestMeta};
-use tesela_core::Error;
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use tesela_core::Error;
 
 // ---------------------------------------------------------------------------
 // StaticActorResolver — fixed actor, useful in tests and single-tenant CLIs

@@ -6,10 +6,10 @@
 //!
 //! Scorers are pure functions: `fn(case: &Case, got: &serde_json::Value) -> Score`.
 
-use tesela_core::Error;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::time::Instant;
+use tesela_core::Error;
 
 // ---------------------------------------------------------------------------
 // Case and Suite

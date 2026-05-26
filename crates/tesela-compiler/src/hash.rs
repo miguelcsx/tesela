@@ -1,12 +1,12 @@
 //! Spec hashing, normalization, and the `HasApiName` trait.
 
+use sha2::{Digest, Sha256};
 use tesela_core::ApiName;
 use tesela_ir::{
     ActionType, Agent, AggregateView, ArtifactType, Asset, CapabilityGrant, CustomTool, Datasource,
     Environment, EventType, JobType, LinkType, ObjectType, PolicyRule, Role, Spec, Trait,
     UploadFlow,
 };
-use sha2::{Digest, Sha256};
 
 /// Compute a SHA-256 hash of the normalized JSON representation of a spec.
 pub fn hash_spec(spec: &Spec) -> String {

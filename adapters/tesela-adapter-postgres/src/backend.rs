@@ -1,11 +1,11 @@
+use sqlx::PgPool;
+use std::sync::Arc;
 use tesela_core::{ApiName, Error, Value};
 use tesela_ir::{MutationResult, Page, Record};
 use tesela_runtime::{
     ports::{Backend, Getter, Mutator, Searcher},
     query::{BackendCapabilities, Mutation, Query},
 };
-use sqlx::PgPool;
-use std::sync::Arc;
 
 /// PostgreSQL-backed implementation of the Tesela `Backend` trait.
 pub struct PostgresBackend {

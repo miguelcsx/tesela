@@ -1,10 +1,10 @@
 //! Branch / draft spec management.
 
 use crate::ports::BranchStore;
-use tesela_core::Error;
-use tesela_ir::{Branch, BranchStatus, Spec};
 use std::collections::HashMap;
 use std::sync::RwLock;
+use tesela_core::Error;
+use tesela_ir::{Branch, BranchStatus, Spec};
 
 /// In-memory [`BranchStore`] for development and testing.
 pub struct MemoryBranchStore {

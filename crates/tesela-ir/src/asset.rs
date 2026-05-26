@@ -1,8 +1,8 @@
 //! Asset, column mapping, lineage, and environment types.
 
-use tesela_core::{ApiName, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, Value};
 
 use crate::Property;
 

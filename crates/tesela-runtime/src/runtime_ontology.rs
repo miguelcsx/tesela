@@ -2,14 +2,14 @@
 
 use crate::query::Actor;
 use crate::runtime::{OntologySnapshot, Runtime};
+use std::collections::BTreeMap;
+use std::sync::Arc;
 use tesela_core::{ApiName, Error, Value, lock_write};
 use tesela_graph::{GraphBuilder, SchemaGraph};
 use tesela_ir::{
     ActionType, Agent, Branch, BranchStatus, Capabilities, HealthStatus, LinkType, ObjectType,
     PolicyRule, Spec, Trait, TransformPipeline,
 };
-use std::collections::BTreeMap;
-use std::sync::Arc;
 
 impl Runtime {
     /// Create a new draft branch from the current spec.

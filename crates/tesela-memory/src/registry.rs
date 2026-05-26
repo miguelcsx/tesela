@@ -1,6 +1,8 @@
 //! DefaultBackendRegistry, MemoryBackendFactory, and capabilities helper.
 
 use crate::backend::MemoryBackend;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, RwLock};
 use tesela_core::{ApiName, Error, Value, lock_read, lock_write};
 use tesela_ir::Capabilities;
 use tesela_runtime::{
@@ -10,8 +12,6 @@ use tesela_runtime::{
     },
     query::BackendCapabilities,
 };
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, RwLock};
 
 /// A default backend registry backed by a `RwLock<HashMap>`.
 pub struct DefaultBackendRegistry {

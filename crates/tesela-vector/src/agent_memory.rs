@@ -1,9 +1,9 @@
 //! Vector-backed semantic agent memory store.
 
 use crate::Embedder;
+use std::sync::Arc;
 use tesela_core::Error;
 use tesela_runtime::ports::{AgentMemoryStore, VectorBackend, VectorSearchQuery};
-use std::sync::Arc;
 
 /// Object type name used for the vector memory index.
 const MEMORY_OBJECT_TYPE: &str = "agent_memory";

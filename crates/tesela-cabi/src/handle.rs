@@ -1,5 +1,10 @@
 //! Handle table, buffer types, helpers, and memory management exports.
 
+use serde::{Serialize, de::DeserializeOwned};
+use std::collections::{BTreeMap, HashMap};
+use std::ffi::{CStr, CString};
+use std::os::raw::{c_char, c_int, c_void};
+use std::sync::{Arc, Mutex, OnceLock};
 use tesela_compiler::Compiler;
 use tesela_core::ApiName;
 use tesela_ir::Spec;
@@ -9,11 +14,6 @@ use tesela_runtime::{
     ports::{Backend, BackendFactory, BackendRegistry},
     runtime::{Runtime, RuntimeOptions},
 };
-use serde::{Serialize, de::DeserializeOwned};
-use std::collections::{BTreeMap, HashMap};
-use std::ffi::{CStr, CString};
-use std::os::raw::{c_char, c_int, c_void};
-use std::sync::{Arc, Mutex, OnceLock};
 pub(crate) enum Subscription {
     Event(std::sync::mpsc::Receiver<tesela_runtime::query::Event>),
     Change(std::sync::mpsc::Receiver<tesela_runtime::ports::ChangeEvent>),
@@ -669,10 +669,7 @@ impl Backend for CAbiArcBackendRef {
     }
 }
 
-pub(crate) unsafe fn extract_actor(
-    ptr: *const c_char,
-    len: c_int,
-) -> tesela_runtime::query::Actor {
+pub(crate) unsafe fn extract_actor(ptr: *const c_char, len: c_int) -> tesela_runtime::query::Actor {
     if ptr.is_null() || len <= 0 {
         return default_actor();
     }

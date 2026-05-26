@@ -3,9 +3,9 @@
 use crate::ports::*;
 use crate::query::*;
 use crate::runtime::Runtime;
-use tesela_core::{ApiName, Error, Operation, Value};
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use tesela_core::{ApiName, Error, Operation, Value};
 
 impl Runtime {
     /// Evaluate policy and return the full decision.

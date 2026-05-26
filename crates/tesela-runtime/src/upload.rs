@@ -9,10 +9,10 @@
 
 use crate::ports::AuditSink;
 use crate::query::AuditRecord;
-use tesela_core::{ApiName, Error, lock_mutex};
-use tesela_ir::Record;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use tesela_core::{ApiName, Error, lock_mutex};
+use tesela_ir::Record;
 
 // ---------------------------------------------------------------------------
 // Port

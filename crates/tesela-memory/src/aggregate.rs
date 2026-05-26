@@ -1,7 +1,7 @@
+use std::collections::BTreeMap;
 use tesela_core::{ApiName, Value};
 use tesela_ir::{AggregateResult, Record};
 use tesela_runtime::query::Aggregation;
-use std::collections::BTreeMap;
 
 /// Compute aggregations over a filtered set of records.
 ///

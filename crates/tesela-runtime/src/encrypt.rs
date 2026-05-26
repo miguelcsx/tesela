@@ -2,9 +2,9 @@
 
 use crate::crypto::Sealer;
 use base64::{Engine, engine::general_purpose::STANDARD as B64};
+use std::collections::BTreeMap;
 use tesela_core::{ApiName, Error, Value};
 use tesela_ir::{ObjectType, Record};
-use std::collections::BTreeMap;
 
 /// Encrypt values for properties marked `encrypted: true`.
 pub fn encrypt_sensitive_fields(

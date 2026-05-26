@@ -1,8 +1,8 @@
-use tesela_core::{Error, Value};
-use tesela_runtime::{ports::AgentRuntime, query::Actor};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::time::Duration;
+use tesela_core::{Error, Value};
+use tesela_runtime::{ports::AgentRuntime, query::Actor};
 
 const DEFAULT_TIMEOUT_SECS: u64 = 120;
 
@@ -135,10 +135,8 @@ impl ApxmAgentRuntime {
             return Err(Error::adapter(msg));
         }
 
-        let result: SkillExecuteResponse =
-            serde_json::from_str(&resp_text).map_err(|e| {
-                Error::adapter(format!("failed to parse APXM response: {e}"))
-            })?;
+        let result: SkillExecuteResponse = serde_json::from_str(&resp_text)
+            .map_err(|e| Error::adapter(format!("failed to parse APXM response: {e}")))?;
 
         tracing::info!(
             execution_id = %result.execution_id,
@@ -178,10 +176,8 @@ impl ApxmAgentRuntime {
             return Err(Error::adapter(msg));
         }
 
-        let record: ExecutionRecord =
-            serde_json::from_str(&resp_text).map_err(|e| {
-                Error::adapter(format!("failed to parse execution record: {e}"))
-            })?;
+        let record: ExecutionRecord = serde_json::from_str(&resp_text)
+            .map_err(|e| Error::adapter(format!("failed to parse execution record: {e}")))?;
 
         Ok(map_execution_to_agent_run(record))
     }
@@ -295,10 +291,7 @@ fn map_execution_to_agent_run(record: ExecutionRecord) -> tesela_ir::AgentRun {
         other => other,
     };
 
-    let output = record
-        .result
-        .as_ref()
-        .and_then(|r| r.content.clone());
+    let output = record.result.as_ref().and_then(|r| r.content.clone());
 
     let total_tokens: usize = record
         .node_metrics
@@ -311,18 +304,12 @@ fn map_execution_to_agent_run(record: ExecutionRecord) -> tesela_ir::AgentRun {
         .iter()
         .map(|n| {
             let mut msg = BTreeMap::new();
-            msg.insert(
-                "role".to_string(),
-                Value::from("assistant"),
-            );
+            msg.insert("role".to_string(), Value::from("assistant"));
             if let Some(name) = &n.node_name {
                 msg.insert("node".to_string(), Value::from(name.as_str()));
             }
             if let Some(out) = &n.output {
-                msg.insert(
-                    "content".to_string(),
-                    Value::from(out.to_string()),
-                );
+                msg.insert("content".to_string(), Value::from(out.to_string()));
             }
             msg
         })
@@ -365,23 +352,17 @@ mod tests {
             result: Some(SkillExecuteResponse {
                 execution_id: "exec-001".to_string(),
                 content: Some("Hello from APXM".to_string()),
-                stats: ExecutionStats {
-                    executed_nodes: 3,
-                },
+                stats: ExecutionStats { executed_nodes: 3 },
             }),
             error: None,
-            node_outputs: vec![
-                NodeOutputRecord {
-                    node_name: Some("ask_0".to_string()),
-                    output: Some(serde_json::json!("Hello from APXM")),
-                },
-            ],
-            node_metrics: vec![
-                NodeMetricsRecord {
-                    input_tokens: Some(100),
-                    output_tokens: Some(50),
-                },
-            ],
+            node_outputs: vec![NodeOutputRecord {
+                node_name: Some("ask_0".to_string()),
+                output: Some(serde_json::json!("Hello from APXM")),
+            }],
+            node_metrics: vec![NodeMetricsRecord {
+                input_tokens: Some(100),
+                output_tokens: Some(50),
+            }],
         };
 
         let run = map_execution_to_agent_run(record);

@@ -1,8 +1,8 @@
 //! Link type definitions.
 
-use tesela_core::{ApiName, LinkCardinality, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, LinkCardinality, Value};
 
 /// A named, directional relationship between two object types.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

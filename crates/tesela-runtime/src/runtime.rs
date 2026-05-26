@@ -6,10 +6,10 @@ use crate::ports::*;
 use crate::query::Actor;
 use crate::ratelimit::RateLimiter;
 use crate::runtime_internal::{DefaultIdGenerator, SystemClock};
-use tesela_core::{ApiName, Error, lock_read};
-use tesela_ir::{ObjectSet, Spec, TransformPipeline};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use tesela_core::{ApiName, Error, lock_read};
+use tesela_ir::{ObjectSet, Spec, TransformPipeline};
 
 // ---------------------------------------------------------------------------
 // RuntimeOptions

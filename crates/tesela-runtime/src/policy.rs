@@ -2,9 +2,9 @@
 
 use crate::ports::{ConditionEvaluator, ObligationExecutor, PolicyEvaluator};
 use crate::query::{Actor, PolicyDecision, PolicyRequest};
+use std::collections::{BTreeMap, HashSet};
 use tesela_core::{ApiName, Error, PolicyEffect};
 use tesela_ir::PolicyRule;
-use std::collections::{BTreeMap, HashSet};
 
 /// A simple rules-based policy evaluator.
 ///
@@ -81,7 +81,7 @@ where
 
         // Sort rules by priority (higher first).
         let mut sorted_rules = self.rules.clone();
-        sorted_rules.sort_by(|a, b| b.priority.cmp(&a.priority));
+        sorted_rules.sort_by_key(|b| std::cmp::Reverse(b.priority));
 
         for rule in &sorted_rules {
             // Check role match.

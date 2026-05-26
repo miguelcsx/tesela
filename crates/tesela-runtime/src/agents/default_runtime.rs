@@ -7,10 +7,10 @@ use crate::ports::{
     IdGenerator, ModelProvider, Planner, PolicyEvaluator, SubagentRuntime,
 };
 use crate::query::{Actor, ApprovalRequest, Message, ModelRequest, ToolCall, ToolDef};
-use tesela_core::Value;
-use tesela_core::{ApiName, Error, Operation};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use tesela_core::Value;
+use tesela_core::{ApiName, Error, Operation};
 
 // jsonschema used via path `jsonschema::validator_for` — no import needed
 

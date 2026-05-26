@@ -2,9 +2,9 @@
 
 use crate::ports::AuditSink;
 use crate::query::AuditRecord;
-use tesela_core::{Error, lock_mutex};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use tesela_core::{Error, lock_mutex};
 
 /// Audit sink that discards all records.
 pub struct NoopAuditSink;

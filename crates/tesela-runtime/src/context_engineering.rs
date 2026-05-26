@@ -7,8 +7,8 @@
 use crate::constants::*;
 use crate::ports::{Compactor, ModelProvider};
 use crate::query::Message;
-use tesela_core::Error;
 use std::sync::Arc;
+use tesela_core::Error;
 
 /// Default token budget when none is configured on the agent.
 pub const DEFAULT_TOKEN_BUDGET: u32 = 16_000;

@@ -2,9 +2,9 @@
 
 use crate::ports::{ActionDispatcher, ActionHandler};
 use crate::query::ActionRequest;
+use std::collections::HashMap;
 use tesela_core::{ApiName, Error};
 use tesela_ir::ActionResult;
-use std::collections::HashMap;
 
 /// Dispatches to registered action handlers.
 pub struct DefaultActionDispatcher {

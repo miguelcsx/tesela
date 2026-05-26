@@ -2,8 +2,8 @@
 
 use crate::query::*;
 use crate::runtime::Runtime;
-use tesela_core::{ApiName, Error, Operation, Value};
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, Error, Operation, Value};
 
 impl Runtime {
     /// Issue a constrained capability from a declared grant.

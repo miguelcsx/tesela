@@ -12,12 +12,12 @@
 //! }
 //! ```
 
+use std::sync::Arc;
 use tesela::graphql::GraphQLSchemaBuilder;
 use tesela::memory::{DefaultBackendRegistry, MemoryBackend};
 use tesela::runtime::runtime::{Runtime, RuntimeOptions};
 use tesela::sdk::{App, ObjectTypeBuilder, PropertyBuilder};
 use tesela_core::{ApiName, DataType};
-use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {

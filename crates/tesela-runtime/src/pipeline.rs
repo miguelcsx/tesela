@@ -6,14 +6,14 @@
 
 use crate::ports::{BackendRegistry, PipelineExecutor};
 use crate::query::{Mutation, Query};
+use std::collections::{BTreeMap, VecDeque};
+use std::sync::Arc;
+use std::time::Instant;
 use tesela_core::{ApiName, Error, Value};
 use tesela_ir::{
     ErrorStrategy, ExecutionMode, PipelineContext, PipelineResult, RouteChange, StepDirective,
     StepKind, StepResult, StepStatus, TransformPipeline, TransformStep,
 };
-use std::collections::{BTreeMap, VecDeque};
-use std::sync::Arc;
-use std::time::Instant;
 
 /// Evaluates boolean expressions and source references against pipeline context.
 pub trait PipelineConditionEvaluator: Send + Sync {
@@ -22,11 +22,7 @@ pub trait PipelineConditionEvaluator: Send + Sync {
     /// Resolve a dynamic source expression to an api_name.
     fn resolve_source(&self, expr: &str, ctx: &PipelineContext) -> Result<ApiName, Error>;
     /// Evaluate a decision expression, returning a directive for DAG mutation.
-    fn evaluate_decision(
-        &self,
-        expr: &str,
-        ctx: &PipelineContext,
-    ) -> Result<StepDirective, Error>;
+    fn evaluate_decision(&self, expr: &str, ctx: &PipelineContext) -> Result<StepDirective, Error>;
 }
 
 /// Simple built-in expression evaluator.
@@ -47,10 +43,7 @@ impl PipelineConditionEvaluator for SimplePipelineConditionEvaluator {
         }
         if let Some((var, val)) = parse_equality(expr) {
             let negated = expr.contains("!=");
-            let actual = ctx
-                .variables
-                .get(var)
-                .or_else(|| ctx.metadata.get(var));
+            let actual = ctx.variables.get(var).or_else(|| ctx.metadata.get(var));
             let matches = match actual {
                 Some(v) if v.as_str().is_some() => v.as_str().unwrap() == val,
                 Some(other) => other.to_string().trim_matches('"') == val,
@@ -215,10 +208,7 @@ fn topo_sort_owned(steps: Vec<TransformStep>) -> Vec<TransformStep> {
 
     // Move steps out by index. Build a vec of Options so we can take by index.
     let mut slots: Vec<Option<TransformStep>> = steps.into_iter().map(Some).collect();
-    order
-        .into_iter()
-        .filter_map(|i| slots[i].take())
-        .collect()
+    order.into_iter().filter_map(|i| slots[i].take()).collect()
 }
 
 /// Dynamic pipeline executor that supports mid-execution DAG mutation.
@@ -338,84 +328,72 @@ impl PipelineExecutor for DynamicPipelineExecutor {
             }
 
             match kind {
-                StepKind::Transform => {
-                    match self.execute_transform_step(&step, mode, &ctx) {
-                        Ok(written) => {
-                            total_written += written;
-                            ctx.variables.insert(
-                                format!("{}.records_written", step_name),
-                                Value::from(written),
-                            );
-                            step_results.push(StepResult {
-                                step: step_name.clone(),
-                                status: StepStatus::Executed,
-                                records_written: written,
-                                error: None,
-                                injected_steps: Vec::new(),
-                            });
-                        }
-                        Err(e) => {
-                            let err_msg =
-                                format!("step '{}': {}", step_name, e);
-                            errors.push(err_msg.clone());
+                StepKind::Transform => match self.execute_transform_step(&step, mode, &ctx) {
+                    Ok(written) => {
+                        total_written += written;
+                        ctx.variables.insert(
+                            format!("{}.records_written", step_name),
+                            Value::from(written),
+                        );
+                        step_results.push(StepResult {
+                            step: step_name.clone(),
+                            status: StepStatus::Executed,
+                            records_written: written,
+                            error: None,
+                            injected_steps: Vec::new(),
+                        });
+                    }
+                    Err(e) => {
+                        let err_msg = format!("step '{}': {}", step_name, e);
+                        errors.push(err_msg.clone());
 
-                            match step.on_error.as_ref() {
-                                Some(ErrorStrategy::Abort) => {
-                                    step_results.push(StepResult {
-                                        step: step_name.clone(),
-                                        status: StepStatus::Failed,
-                                        records_written: 0,
-                                        error: Some(e.to_string()),
-                                        injected_steps: Vec::new(),
-                                    });
-                                    break;
-                                }
-                                Some(ErrorStrategy::Fallback { step: fb_name }) => {
-                                    if let Some(fb_step) = queue.find_step(fb_name).cloned() {
-                                        match self.execute_transform_step(&fb_step, mode, &ctx) {
-                                            Ok(written) => {
-                                                total_written += written;
-                                                step_results.push(StepResult {
-                                                    step: step_name.clone(),
-                                                    status: StepStatus::Failed,
-                                                    records_written: 0,
-                                                    error: Some(e.to_string()),
-                                                    injected_steps: Vec::new(),
-                                                });
-                                                step_results.push(StepResult {
-                                                    step: fb_name.clone(),
-                                                    status: StepStatus::Executed,
-                                                    records_written: written,
-                                                    error: None,
-                                                    injected_steps: Vec::new(),
-                                                });
-                                                queue.remove(std::slice::from_ref(fb_name));
-                                            }
-                                            Err(fb_err) => {
-                                                errors.push(format!(
-                                                    "step '{}': fallback also failed: {}",
-                                                    fb_name, fb_err
-                                                ));
-                                                step_results.push(StepResult {
-                                                    step: step_name.clone(),
-                                                    status: StepStatus::Failed,
-                                                    records_written: 0,
-                                                    error: Some(e.to_string()),
-                                                    injected_steps: Vec::new(),
-                                                });
-                                            }
+                        match step.on_error.as_ref() {
+                            Some(ErrorStrategy::Abort) => {
+                                step_results.push(StepResult {
+                                    step: step_name.clone(),
+                                    status: StepStatus::Failed,
+                                    records_written: 0,
+                                    error: Some(e.to_string()),
+                                    injected_steps: Vec::new(),
+                                });
+                                break;
+                            }
+                            Some(ErrorStrategy::Fallback { step: fb_name }) => {
+                                if let Some(fb_step) = queue.find_step(fb_name).cloned() {
+                                    match self.execute_transform_step(&fb_step, mode, &ctx) {
+                                        Ok(written) => {
+                                            total_written += written;
+                                            step_results.push(StepResult {
+                                                step: step_name.clone(),
+                                                status: StepStatus::Failed,
+                                                records_written: 0,
+                                                error: Some(e.to_string()),
+                                                injected_steps: Vec::new(),
+                                            });
+                                            step_results.push(StepResult {
+                                                step: fb_name.clone(),
+                                                status: StepStatus::Executed,
+                                                records_written: written,
+                                                error: None,
+                                                injected_steps: Vec::new(),
+                                            });
+                                            queue.remove(std::slice::from_ref(fb_name));
                                         }
-                                    } else {
-                                        step_results.push(StepResult {
-                                            step: step_name.clone(),
-                                            status: StepStatus::Failed,
-                                            records_written: 0,
-                                            error: Some(e.to_string()),
-                                            injected_steps: Vec::new(),
-                                        });
+                                        Err(fb_err) => {
+                                            errors.push(format!(
+                                                "step '{}': fallback also failed: {}",
+                                                fb_name, fb_err
+                                            ));
+                                            step_results.push(StepResult {
+                                                step: step_name.clone(),
+                                                status: StepStatus::Failed,
+                                                records_written: 0,
+                                                error: Some(e.to_string()),
+                                                injected_steps: Vec::new(),
+                                            });
+                                        }
                                     }
-                                }
-                                None | Some(ErrorStrategy::Skip) => {
+                                } else {
                                     step_results.push(StepResult {
                                         step: step_name.clone(),
                                         status: StepStatus::Failed,
@@ -425,16 +403,28 @@ impl PipelineExecutor for DynamicPipelineExecutor {
                                     });
                                 }
                             }
+                            None | Some(ErrorStrategy::Skip) => {
+                                step_results.push(StepResult {
+                                    step: step_name.clone(),
+                                    status: StepStatus::Failed,
+                                    records_written: 0,
+                                    error: Some(e.to_string()),
+                                    injected_steps: Vec::new(),
+                                });
+                            }
                         }
                     }
-                }
+                },
 
                 StepKind::Decision => {
                     let expr = step.expression.as_deref().unwrap_or("true");
                     match self.condition_eval.evaluate_decision(expr, &ctx) {
                         Ok(directive) => {
-                            let injected_names: Vec<ApiName> =
-                                directive.inject.iter().map(|s| s.api_name.clone()).collect();
+                            let injected_names: Vec<ApiName> = directive
+                                .inject
+                                .iter()
+                                .map(|s| s.api_name.clone())
+                                .collect();
 
                             if !directive.remove.is_empty() {
                                 queue.remove(&directive.remove);

@@ -3,9 +3,9 @@
 //! [`ConfigSource`] is the agnostic port; adapters for YAML files, Consul KV,
 //! or AWS AppConfig can implement it directly.
 
-use tesela_core::{Error, lock_read, lock_write};
 use std::collections::BTreeMap;
 use std::sync::RwLock;
+use tesela_core::{Error, lock_read, lock_write};
 
 // ---------------------------------------------------------------------------
 // ConfigSource port

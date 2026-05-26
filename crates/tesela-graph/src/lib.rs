@@ -6,12 +6,12 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-use tesela_core::{ApiName, Diagnostic, DiagnosticCode};
-use tesela_ir::{LinkType, ObjectType, Spec};
 use petgraph::algo::tarjan_scc;
 use petgraph::graph::{Graph, NodeIndex};
 use petgraph::visit::EdgeRef;
 use std::collections::{HashMap, HashSet, VecDeque};
+use tesela_core::{ApiName, Diagnostic, DiagnosticCode};
+use tesela_ir::{LinkType, ObjectType, Spec};
 
 /// An immutable schema graph built from a `Spec`.
 ///

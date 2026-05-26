@@ -30,8 +30,8 @@ pub use datasource::DatasourceBuilder;
 pub use link::LinkBuilder;
 pub use object::ObjectTypeBuilder;
 pub use operations::{
-    aggregate_view, capability_grant, event_type, measure, spatial_extent, time_bucket,
-    ArtifactTypeBuilder, JobTypeBuilder, UploadFlowBuilder,
+    ArtifactTypeBuilder, JobTypeBuilder, UploadFlowBuilder, aggregate_view, capability_grant,
+    event_type, measure, spatial_extent, time_bucket,
 };
 pub use policy::PolicyBuilder;
 pub use property::PropertyBuilder;

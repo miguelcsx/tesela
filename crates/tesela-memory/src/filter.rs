@@ -1,6 +1,6 @@
+use std::collections::BTreeMap;
 use tesela_core::{FilterOp, Value};
 use tesela_ir::Filter;
-use std::collections::BTreeMap;
 
 /// Evaluate a filter against a record's field values.
 ///

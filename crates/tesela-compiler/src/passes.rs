@@ -2,10 +2,10 @@
 
 use crate::compiler::Pass;
 use crate::hash::HasApiName;
+use std::collections::{HashMap, HashSet};
 use tesela_core::{ApiName, DataType, Diagnostic, DiagnosticCode, LinkCardinality, Operation};
 use tesela_graph::SchemaGraph;
 use tesela_ir::{ObjectType, Spec};
-use std::collections::{HashMap, HashSet};
 
 /// Validate API names: regex `^[a-z][a-z0-9_]*$` and uniqueness within each collection.
 pub struct NameValidationPass;

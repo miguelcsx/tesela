@@ -2,9 +2,9 @@
 
 use crate::ports::{BackendRegistry, FederatedBackend, FederatedQuery};
 use crate::query::Sort;
+use std::sync::Arc;
 use tesela_core::Error;
 use tesela_ir::Page;
-use std::sync::Arc;
 
 /// Executes fan-out searches across registered backends and merges results.
 ///

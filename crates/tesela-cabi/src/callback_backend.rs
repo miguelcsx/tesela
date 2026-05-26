@@ -5,18 +5,16 @@
 //! and must return a JSON response matching the expected return type.
 
 use crate::handle::CCallback;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+use std::os::raw::{c_char, c_int};
 use tesela_core::{ApiName, Error, Value};
 use tesela_ir::{AggregateResult, ExplainPlan, MutationResult, Page, Record};
 use tesela_runtime::ports::{
     Aggregator, Backend, BulkLoader, Getter, Mutator, Rollbacker, SearchExplainer, Searcher,
     Traverser,
 };
-use tesela_runtime::query::{
-    AggregateQuery, BackendCapabilities, Mutation, Query, TraversalQuery,
-};
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::os::raw::{c_char, c_int};
+use tesela_runtime::query::{AggregateQuery, BackendCapabilities, Mutation, Query, TraversalQuery};
 
 /// A backend that delegates every operation to a C callback.
 pub(crate) struct CAbiBackend {

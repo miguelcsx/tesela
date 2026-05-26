@@ -5,10 +5,10 @@ use axum::{
     http::{Method, StatusCode},
     response::{IntoResponse, Response},
 };
-use tesela_core::Error;
-use tesela_runtime::{ports::ActorResolver, runtime::Runtime};
 use std::sync::Arc;
 use std::time::Duration;
+use tesela_core::Error;
+use tesela_runtime::{ports::ActorResolver, runtime::Runtime};
 
 /// CORS configuration.
 #[derive(Default)]

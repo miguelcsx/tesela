@@ -1,8 +1,8 @@
 //! Auth and policy port traits.
 
 use crate::query::*;
-use tesela_core::{Error, Value};
 use std::collections::BTreeMap;
+use tesela_core::{Error, Value};
 
 /// Resolves an `Actor` from raw request metadata.
 pub trait ActorResolver: Send + Sync {

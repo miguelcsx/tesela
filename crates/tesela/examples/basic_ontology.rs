@@ -1,13 +1,13 @@
 //! Define a spec via SDK, compile it, build a Runtime with MemoryBackend,
 //! then search/get/mutate records.
 
+use std::collections::BTreeMap;
+use std::sync::Arc;
 use tesela::memory::{DefaultBackendRegistry, MemoryBackend};
 use tesela::runtime::query::{Actor, Mutation, Query};
 use tesela::runtime::runtime::{Runtime, RuntimeOptions};
 use tesela::sdk::{App, ObjectTypeBuilder, PropertyBuilder};
 use tesela_core::{ApiName, DataType, Value};
-use std::collections::BTreeMap;
-use std::sync::Arc;
 
 fn main() {
     // 1. Define the spec using the fluent SDK.

@@ -6,12 +6,12 @@
 
 use crate::ports::Scheduler;
 use crate::query::WorkItem;
-use tesela_core::{Error, lock_mutex};
 use std::collections::{BTreeSet, HashMap};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
+use tesela_core::{Error, lock_mutex};
 
 // ---------------------------------------------------------------------------
 // Cron expression parser

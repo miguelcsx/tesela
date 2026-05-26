@@ -1,8 +1,8 @@
 //! Role, policy rule, obligation, and filter types.
 
-use tesela_core::{ApiName, FilterOp, Operation, PolicyEffect, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, FilterOp, Operation, PolicyEffect, Value};
 
 /// A role definition with inheritance.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

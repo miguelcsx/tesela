@@ -2,8 +2,8 @@
 
 use crate::ports::{EventBus, SubscriptionBus};
 use crate::query::Event;
-use tesela_core::{ApiName, Error, lock_mutex};
 use std::sync::{Mutex, RwLock, mpsc};
+use tesela_core::{ApiName, Error, lock_mutex};
 
 /// Event bus that discards all events.
 pub struct NoopEventBus;

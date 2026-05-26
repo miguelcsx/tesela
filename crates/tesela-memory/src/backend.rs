@@ -1,14 +1,14 @@
 //! MemoryBackend struct, Backend, Searcher, Getter, and Mutator implementations.
 
 use crate::{apply_sort, filter, resolve_offset};
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, RwLock};
 use tesela_core::{ApiName, Error, Value, lock_read, lock_write};
 use tesela_ir::{MutationResult, Page, Record, Spec};
 use tesela_runtime::{
     ports::{Backend, Getter, Mutator, Searcher},
     query::{BackendCapabilities, Mutation, Query},
 };
-use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, RwLock};
 
 /// A thread-safe, in-memory implementation of the Tesela `Backend` trait.
 pub struct MemoryBackend {

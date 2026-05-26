@@ -3,9 +3,9 @@
 use crate::query::*;
 use crate::runtime::Runtime;
 use crate::runtime_internal::apply_redactions;
+use std::collections::BTreeMap;
 use tesela_core::{ApiName, Error, Operation, Value};
 use tesela_ir::{AggregateResult, ExplainPlan, Page, Record};
-use std::collections::BTreeMap;
 
 impl Runtime {
     /// Search records of an object type.

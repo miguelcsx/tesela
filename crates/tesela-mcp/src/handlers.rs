@@ -8,13 +8,13 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use std::collections::BTreeMap;
+use std::sync::Arc;
 use tesela_core::{ApiName, Error, Value};
 use tesela_runtime::{
     query::{Actor, AggregateQuery, Query, TraversalQuery},
     runtime::Runtime,
 };
-use std::collections::BTreeMap;
-use std::sync::Arc;
 
 /// The Tesela MCP server.
 pub struct McpServer {

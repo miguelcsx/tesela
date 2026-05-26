@@ -1,8 +1,8 @@
 //! Operational primitives for adapter-owned runtime workflows.
 
-use tesela_core::{ApiName, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, Value};
 
 use crate::{ColumnMapping, Property, QualityRule};
 

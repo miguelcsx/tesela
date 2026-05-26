@@ -1,10 +1,10 @@
 //! Structural diff engine for specs.
 
 use crate::hash::HasApiName;
-use tesela_core::ApiName;
-use tesela_ir::Spec;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tesela_core::ApiName;
+use tesela_ir::Spec;
 
 /// A single entry in a diff.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

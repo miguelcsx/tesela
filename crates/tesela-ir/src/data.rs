@@ -1,8 +1,8 @@
 //! Runtime data types (records, pages, results).
 
-use tesela_core::{ApiName, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, Value};
 
 /// A single record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

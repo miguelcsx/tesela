@@ -21,6 +21,8 @@
 //! curl http://localhost:8080/v1/health
 //! ```
 
+use std::collections::BTreeMap;
+use std::sync::Arc;
 use tesela::memory::{DefaultBackendRegistry, MemoryBackend};
 use tesela::runtime::{
     auth::StaticActorResolver,
@@ -30,8 +32,6 @@ use tesela::runtime::{
 use tesela::sdk::{App, ObjectTypeBuilder, PropertyBuilder};
 use tesela::server::{Server, ServerOptions};
 use tesela_core::{ApiName, DataType};
-use std::collections::BTreeMap;
-use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {

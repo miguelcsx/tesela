@@ -7,8 +7,8 @@
 //! Machines are pure data structures — they carry no mutable state.
 //! Callers own the "current state" value and pass it to `transition`.
 
-use tesela_core::Error;
 use std::collections::HashMap;
+use tesela_core::Error;
 
 // ---------------------------------------------------------------------------
 // Types

@@ -2,10 +2,10 @@
 
 use crate::Runtime;
 use crate::ports::WorkspaceFactory;
-use tesela_core::Error;
-use tesela_ir;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use tesela_core::Error;
+use tesela_ir;
 
 /// A pool of [`Runtime`] instances keyed by workspace ID.
 ///

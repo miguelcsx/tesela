@@ -1,8 +1,8 @@
 //! Runtime lineage store implementation.
 
 use crate::ports::{LineageKind, LineageRecord, LineageStore};
-use tesela_core::{ApiName, Error, Value};
 use std::sync::RwLock;
+use tesela_core::{ApiName, Error, Value};
 
 /// In-memory lineage store backed by a `Vec`.
 ///

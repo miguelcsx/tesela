@@ -31,10 +31,7 @@ pub(crate) fn expand(input: TokenStream) -> TokenStream {
     let from_str = &macro_args.from;
     let to_str = &macro_args.to;
     let display_name = macro_args.display.unwrap_or(struct_name_str);
-    let cardinality_str = macro_args
-        .cardinality
-        .as_deref()
-        .unwrap_or("one_to_many");
+    let cardinality_str = macro_args.cardinality.as_deref().unwrap_or("one_to_many");
 
     let cardinality_tokens = match cardinality_str {
         "one_to_one" => quote!(::tesela_core::LinkCardinality::OneToOne),

@@ -4,9 +4,9 @@
 //! For Vault/AWS Secrets Manager integration, implement the port directly.
 
 use crate::ports::SecretResolver;
-use tesela_core::Error;
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use tesela_core::Error;
 
 // ---------------------------------------------------------------------------
 // EnvSecretResolver — reads from environment variables

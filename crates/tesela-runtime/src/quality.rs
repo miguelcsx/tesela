@@ -1,9 +1,9 @@
 //! Quality rule validation.
 
 use crate::ports::QualityRuleEvaluator;
+use regex::Regex;
 use tesela_core::Error;
 use tesela_ir::{ObjectType, Record};
-use regex::Regex;
 
 /// Quality rule kinds understood by [`StaticQualityRuleEvaluator`].
 mod kind {

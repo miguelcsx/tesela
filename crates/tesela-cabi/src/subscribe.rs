@@ -1,6 +1,6 @@
 //! Subscription CABI exports — event bus and change-stream polling.
 
-use crate::handle::{TeselaBuffer, Subscription, lock_handles, parse_api_name};
+use crate::handle::{Subscription, TeselaBuffer, lock_handles, parse_api_name};
 use std::os::raw::{c_char, c_int};
 use std::time::Duration;
 

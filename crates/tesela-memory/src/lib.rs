@@ -56,13 +56,13 @@ pub(crate) fn resolve_offset(cursor: &Option<String>, offset: Option<i32>) -> us
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
     use tesela_core::{ApiName, Value};
     use tesela_ir::{Filter, Record};
     use tesela_runtime::{
         ports::{Aggregator, BulkLoader, Getter, Mutator, Rollbacker, Searcher},
         query::{AggregateQuery, Aggregation, Mutation, Query, Sort},
     };
-    use std::collections::BTreeMap;
 
     fn pk_record(id: i64, extra: &[(&str, serde_json::Value)]) -> Record {
         let pk_val = Value::integer(id);

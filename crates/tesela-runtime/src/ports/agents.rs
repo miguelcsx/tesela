@@ -1,8 +1,8 @@
 //! Agent runtime, model provider, memory, and evaluation port traits.
 
 use crate::query::*;
-use tesela_core::{Error, Value};
 use std::collections::BTreeMap;
+use tesela_core::{Error, Value};
 
 /// Runtime for executing agent runs.
 pub trait AgentRuntime: Send + Sync {

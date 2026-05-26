@@ -1,8 +1,8 @@
 //! Action type definitions.
 
-use tesela_core::{ApiName, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, Value};
 
 /// A named action that can be executed against the ontology.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

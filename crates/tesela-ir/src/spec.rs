@@ -5,10 +5,10 @@ use crate::{
     Environment, EventType, JobType, LinkType, ObjectSet, ObjectType, PolicyRule, Role, Trait,
     TransformPipeline, UploadFlow,
 };
-use tesela_core::{ApiName, Value, Version};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, Value, Version};
 
 /// Current spec version string.
 pub const SPEC_VERSION: &str = "tesela.spec.v1";
@@ -268,9 +268,23 @@ macro_rules! impl_has_api_name {
 }
 
 impl_has_api_name!(
-    ObjectType, LinkType, ActionType, PolicyRule, Agent, Trait,
-    TransformPipeline, Role, Datasource, CustomTool, Asset, ArtifactType,
-    UploadFlow, JobType, EventType, CapabilityGrant, AggregateView,
+    ObjectType,
+    LinkType,
+    ActionType,
+    PolicyRule,
+    Agent,
+    Trait,
+    TransformPipeline,
+    Role,
+    Datasource,
+    CustomTool,
+    Asset,
+    ArtifactType,
+    UploadFlow,
+    JobType,
+    EventType,
+    CapabilityGrant,
+    AggregateView,
 );
 
 fn upsert_by_name<T: HasApiName>(vec: &mut Vec<T>, item: T) {

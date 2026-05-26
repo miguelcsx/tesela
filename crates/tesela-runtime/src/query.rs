@@ -1,8 +1,8 @@
 //! Query and data types for the Tesela runtime.
 
-use tesela_core::{ApiName, Value};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use tesela_core::{ApiName, Value};
 
 /// A search query.
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
