@@ -107,6 +107,86 @@ def _agent(app: "App", cls: Any, *, model: str = "", allowed_tools: list[str] | 
     return cls
 
 
+def _policy(app: "App", target: Any, *, effect: str = "allow",
+            roles: list[str] | None = None, operations: list[str] | None = None,
+            resource_kind: str = "", resource: str = "") -> Any:
+    if callable(target) and not isinstance(target, type):
+        api_name = target.__name__
+        desc = target.__doc__ or ""
+    else:
+        api_name = target.__name__.lower()
+        effect = getattr(target, "EFFECT", effect)
+        roles = getattr(target, "ROLES", roles)
+        operations = getattr(target, "OPERATIONS", operations)
+        resource_kind = getattr(target, "RESOURCE_KIND", resource_kind)
+        resource = getattr(target, "RESOURCE", resource)
+        desc = getattr(target, "DESCRIPTION", "") or ""
+
+    p: dict[str, Any] = {"api_name": api_name, "effect": effect}
+    if roles:
+        p["roles"] = roles
+    if operations:
+        p["operations"] = operations
+    if resource_kind:
+        p["resource_kind"] = resource_kind
+    if resource:
+        p["resource"] = resource
+    if desc:
+        p["description"] = desc
+    cond = getattr(target, "CONDITION", None) if isinstance(target, type) else None
+    if cond:
+        p["condition"] = cond
+    app._policies.append(p)
+    return target
+
+
+def _trait_def(app: "App", cls: Any, *, display: str = "") -> Any:
+    if not dataclasses.is_dataclass(cls):
+        cls = dataclasses.dataclass(cls)
+
+    hints = typing.get_type_hints(cls)
+    props = []
+    for f in dataclasses.fields(cls):
+        dt = _type_map(hints.get(f.name, str))
+        props.append({"api_name": f.name, "data_type": dt})
+
+    app._traits.append({
+        "api_name": cls.__name__.lower(),
+        "display": display or cls.__name__,
+        "properties": props,
+    })
+    return cls
+
+
+def _pipeline(app: "App", cls: Any, *, schedule: str = "",
+              mode: str = "incremental") -> Any:
+    steps = []
+    for step in getattr(cls, "STEPS", []):
+        s: dict[str, Any] = {
+            "api_name": step["api_name"],
+            "source": step["source"],
+            "target": step["target"],
+        }
+        for key in ("expression", "language", "when", "on_error", "dynamic_source", "kind"):
+            if step.get(key):
+                s[key] = step[key]
+        steps.append(s)
+
+    p: dict[str, Any] = {
+        "api_name": cls.__name__.lower(),
+        "display": cls.__name__,
+        "steps": steps,
+        "mode": mode,
+    }
+    if schedule:
+        p["schedule"] = {"Cron": schedule} if schedule != "manual" else "manual"
+    ctx = getattr(cls, "CONTEXT", None)
+    if ctx:
+        p["context"] = ctx
+    app._pipelines.append(p)
+    return cls
+
+
 class App:
     """Root workspace. One app = one ontology."""
 
@@ -116,18 +196,32 @@ class App:
         self._links: list[dict] = []
         self._actions: list[dict] = []
         self._agents: list[dict] = []
+        self._policies: list[dict] = []
+        self._traits: list[dict] = []
+        self._pipelines: list[dict] = []
         self._ds = {"api_name": "memory", "adapter_type": "memory"}
 
     def compile(self) -> dict:
-        return {
+        spec: dict[str, Any] = {
             "version": "tesela.spec.v1",
             "workspace": {"api_name": self._name},
             "datasources": [self._ds],
-            "object_types": self._entities,
-            "link_types": self._links,
-            "actions": self._actions,
-            "agents": self._agents,
         }
+        if self._entities:
+            spec["object_types"] = self._entities
+        if self._links:
+            spec["link_types"] = self._links
+        if self._actions:
+            spec["actions"] = self._actions
+        if self._agents:
+            spec["agents"] = self._agents
+        if self._policies:
+            spec["policies"] = self._policies
+        if self._traits:
+            spec["traits"] = self._traits
+        if self._pipelines:
+            spec["pipelines"] = self._pipelines
+        return spec
 
     def compile_json(self, indent: int = 2) -> str:
         return json.dumps(self.compile(), indent=indent)
@@ -178,6 +272,32 @@ class App:
             return decorator(cls)
         return decorator
 
+    def policy(self, target=None, *, effect: str = "allow", roles: list[str] | None = None,
+               operations: list[str] | None = None, resource_kind: str = "", resource: str = ""):
+        """Declare a policy."""
+        def decorator(_target):
+            return _policy(self, _target, effect=effect, roles=roles, operations=operations,
+                           resource_kind=resource_kind, resource=resource)
+        if target is not None:
+            return decorator(target)
+        return decorator
+
+    def trait_def(self, cls=None, *, display: str = ""):
+        """Declare a trait (property mixin)."""
+        def decorator(_cls):
+            return _trait_def(self, _cls, display=display)
+        if cls is not None and isinstance(cls, type):
+            return decorator(cls)
+        return decorator
+
+    def pipeline(self, cls=None, *, schedule: str = "", mode: str = "incremental"):
+        """Declare a pipeline."""
+        def decorator(_cls):
+            return _pipeline(self, _cls, schedule=schedule, mode=mode)
+        if cls is not None and isinstance(cls, type):
+            return decorator(cls)
+        return decorator
+
 
 # ------------------------------------------------------------------
 # Standalone decorators (require explicit App reference)
@@ -210,4 +330,27 @@ def agent(app: App, *, model: str = "", allowed_tools: list[str] | None = None):
     """Standalone agent decorator: ``@agent(app, model='gpt-4')``."""
     def decorator(cls):
         return _agent(app, cls, model=model, allowed_tools=allowed_tools)
+    return decorator
+
+
+def policy(app: App, *, effect: str = "allow", roles: list[str] | None = None,
+           operations: list[str] | None = None, resource_kind: str = "", resource: str = ""):
+    """Standalone policy decorator."""
+    def decorator(target):
+        return _policy(app, target, effect=effect, roles=roles, operations=operations,
+                       resource_kind=resource_kind, resource=resource)
+    return decorator
+
+
+def trait_def(app: App, *, display: str = ""):
+    """Standalone trait decorator."""
+    def decorator(cls):
+        return _trait_def(app, cls, display=display)
+    return decorator
+
+
+def pipeline(app: App, *, schedule: str = "", mode: str = "incremental"):
+    """Standalone pipeline decorator."""
+    def decorator(cls):
+        return _pipeline(app, cls, schedule=schedule, mode=mode)
     return decorator

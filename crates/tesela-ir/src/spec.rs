@@ -117,6 +117,65 @@ impl Spec {
         hex::encode(digest)
     }
 
+    /// Add or replace an object type by api_name.
+    pub fn upsert_object_type(&mut self, item: ObjectType) {
+        upsert_by_name(&mut self.object_types, item);
+    }
+
+    /// Add or replace a link type by api_name.
+    pub fn upsert_link_type(&mut self, item: LinkType) {
+        upsert_by_name(&mut self.link_types, item);
+    }
+
+    /// Add or replace an action type by api_name.
+    pub fn upsert_action(&mut self, item: ActionType) {
+        upsert_by_name(&mut self.actions, item);
+    }
+
+    /// Add or replace a policy rule by api_name.
+    pub fn upsert_policy(&mut self, item: PolicyRule) {
+        upsert_by_name(&mut self.policies, item);
+    }
+
+    /// Add or replace an agent by api_name.
+    pub fn upsert_agent(&mut self, item: Agent) {
+        upsert_by_name(&mut self.agents, item);
+    }
+
+    /// Add or replace a trait by api_name.
+    pub fn upsert_trait(&mut self, item: Trait) {
+        upsert_by_name(&mut self.traits, item);
+    }
+
+    /// Add or replace a pipeline by api_name.
+    pub fn upsert_pipeline(&mut self, item: TransformPipeline) {
+        upsert_by_name(&mut self.pipelines, item);
+    }
+
+    /// Remove an entity by kind and api_name. Returns true if found.
+    pub fn remove_entity(&mut self, kind: &str, api_name: &ApiName) -> bool {
+        match kind {
+            "object_type" => remove_by_name(&mut self.object_types, api_name),
+            "link_type" => remove_by_name(&mut self.link_types, api_name),
+            "action" => remove_by_name(&mut self.actions, api_name),
+            "policy" => remove_by_name(&mut self.policies, api_name),
+            "agent" => remove_by_name(&mut self.agents, api_name),
+            "trait" => remove_by_name(&mut self.traits, api_name),
+            "pipeline" => remove_by_name(&mut self.pipelines, api_name),
+            "role" => remove_by_name(&mut self.roles, api_name),
+            "datasource" => remove_by_name(&mut self.datasources, api_name),
+            "custom_tool" => remove_by_name(&mut self.custom_tools, api_name),
+            "asset" => remove_by_name(&mut self.assets, api_name),
+            "artifact_type" => remove_by_name(&mut self.artifact_types, api_name),
+            "upload_flow" => remove_by_name(&mut self.upload_flows, api_name),
+            "job_type" => remove_by_name(&mut self.job_types, api_name),
+            "event_type" => remove_by_name(&mut self.event_types, api_name),
+            "capability_grant" => remove_by_name(&mut self.capability_grants, api_name),
+            "aggregate_view" => remove_by_name(&mut self.aggregate_views, api_name),
+            _ => false,
+        }
+    }
+
     /// Whether the spec contains no definitions beyond the workspace.
     pub fn is_empty(&self) -> bool {
         self.datasources.is_empty()
@@ -190,6 +249,43 @@ impl Default for Workspace {
             metadata: None,
         }
     }
+}
+
+/// Trait for types that have an `api_name` field for identity comparison.
+pub trait HasApiName {
+    /// Return the api_name of this entity.
+    fn api_name(&self) -> &ApiName;
+}
+
+macro_rules! impl_has_api_name {
+    ($($ty:ty),+ $(,)?) => {
+        $(
+            impl HasApiName for $ty {
+                fn api_name(&self) -> &ApiName { &self.api_name }
+            }
+        )+
+    };
+}
+
+impl_has_api_name!(
+    ObjectType, LinkType, ActionType, PolicyRule, Agent, Trait,
+    TransformPipeline, Role, Datasource, CustomTool, Asset, ArtifactType,
+    UploadFlow, JobType, EventType, CapabilityGrant, AggregateView,
+);
+
+fn upsert_by_name<T: HasApiName>(vec: &mut Vec<T>, item: T) {
+    let name = item.api_name().clone();
+    if let Some(pos) = vec.iter().position(|e| *e.api_name() == name) {
+        vec[pos] = item;
+    } else {
+        vec.push(item);
+    }
+}
+
+fn remove_by_name<T: HasApiName>(vec: &mut Vec<T>, api_name: &ApiName) -> bool {
+    let len = vec.len();
+    vec.retain(|e| e.api_name() != api_name);
+    vec.len() < len
 }
 
 /// A named connection to an external data store.

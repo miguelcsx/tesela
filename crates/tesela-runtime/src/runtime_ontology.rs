@@ -4,7 +4,10 @@ use crate::query::Actor;
 use crate::runtime::{OntologySnapshot, Runtime};
 use tesela_core::{ApiName, Error, Value, lock_write};
 use tesela_graph::{GraphBuilder, SchemaGraph};
-use tesela_ir::{Branch, BranchStatus, Capabilities, HealthStatus, Spec};
+use tesela_ir::{
+    ActionType, Agent, Branch, BranchStatus, Capabilities, HealthStatus, LinkType, ObjectType,
+    PolicyRule, Spec, Trait, TransformPipeline,
+};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
@@ -119,6 +122,76 @@ impl Runtime {
                     }
                 }
             }
+        }
+        self.apply_spec(new_spec)
+    }
+
+    /// Add or replace an object type in the live ontology.
+    #[tracing::instrument(skip(self, item), err)]
+    pub fn add_object_type(&self, item: ObjectType) -> Result<tesela_compiler::Diff, Error> {
+        let mut new_spec = self.spec()?;
+        new_spec.upsert_object_type(item);
+        self.apply_spec(new_spec)
+    }
+
+    /// Add or replace a link type in the live ontology.
+    #[tracing::instrument(skip(self, item), err)]
+    pub fn add_link_type(&self, item: LinkType) -> Result<tesela_compiler::Diff, Error> {
+        let mut new_spec = self.spec()?;
+        new_spec.upsert_link_type(item);
+        self.apply_spec(new_spec)
+    }
+
+    /// Add or replace an action type in the live ontology.
+    #[tracing::instrument(skip(self, item), err)]
+    pub fn add_action(&self, item: ActionType) -> Result<tesela_compiler::Diff, Error> {
+        let mut new_spec = self.spec()?;
+        new_spec.upsert_action(item);
+        self.apply_spec(new_spec)
+    }
+
+    /// Add or replace a policy rule in the live ontology.
+    #[tracing::instrument(skip(self, item), err)]
+    pub fn add_policy(&self, item: PolicyRule) -> Result<tesela_compiler::Diff, Error> {
+        let mut new_spec = self.spec()?;
+        new_spec.upsert_policy(item);
+        self.apply_spec(new_spec)
+    }
+
+    /// Add or replace an agent in the live ontology.
+    #[tracing::instrument(skip(self, item), err)]
+    pub fn add_agent(&self, item: Agent) -> Result<tesela_compiler::Diff, Error> {
+        let mut new_spec = self.spec()?;
+        new_spec.upsert_agent(item);
+        self.apply_spec(new_spec)
+    }
+
+    /// Add or replace a trait definition in the live ontology.
+    #[tracing::instrument(skip(self, item), err)]
+    pub fn add_trait_def(&self, item: Trait) -> Result<tesela_compiler::Diff, Error> {
+        let mut new_spec = self.spec()?;
+        new_spec.upsert_trait(item);
+        self.apply_spec(new_spec)
+    }
+
+    /// Add or replace a pipeline in the live ontology.
+    #[tracing::instrument(skip(self, item), err)]
+    pub fn add_pipeline(&self, item: TransformPipeline) -> Result<tesela_compiler::Diff, Error> {
+        let mut new_spec = self.spec()?;
+        new_spec.upsert_pipeline(item);
+        self.apply_spec(new_spec)
+    }
+
+    /// Remove an entity by kind and api_name from the live ontology.
+    #[tracing::instrument(skip(self), err)]
+    pub fn remove_entity(
+        &self,
+        kind: &str,
+        api_name: &ApiName,
+    ) -> Result<tesela_compiler::Diff, Error> {
+        let mut new_spec = self.spec()?;
+        if !new_spec.remove_entity(kind, api_name) {
+            return Err(Error::not_found(kind, api_name.as_ref()));
         }
         self.apply_spec(new_spec)
     }

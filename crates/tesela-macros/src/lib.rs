@@ -7,15 +7,23 @@
 //!
 //! * `ObjectType` — derive an `tesela_ir::ObjectType` from a struct.
 //! * `Agent` — derive an `tesela_ir::Agent` from a struct.
+//! * `LinkType` — derive an `tesela_ir::LinkType` from a struct.
+//! * `TraitDef` — derive an `tesela_ir::Trait` from a struct.
+//! * `Pipeline` — derive an `tesela_ir::TransformPipeline` from a struct.
 //!
 //! # Attribute macros
 //!
 //! * `action` — derive an `tesela_ir::ActionType` from a free function.
+//! * `policy` — derive an `tesela_ir::PolicyRule` from a free function.
 
 mod action_macro;
 mod agent_macro;
 mod helpers;
+mod link_macro;
 mod object_type_macro;
+mod pipeline_macro;
+mod policy_macro;
+mod trait_macro;
 
 use proc_macro::TokenStream;
 
@@ -48,4 +56,48 @@ pub fn action(args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Agent, attributes(tesela))]
 pub fn derive_agent(input: TokenStream) -> TokenStream {
     agent_macro::expand(input)
+}
+
+/// Derive `tesela_link_type()` for a struct.
+///
+/// Struct-level: `#[tesela(from = "...", to = "...", cardinality = "one_to_many", display = "...")]`
+#[proc_macro_derive(LinkType, attributes(tesela))]
+pub fn derive_link_type(input: TokenStream) -> TokenStream {
+    link_macro::expand(input)
+}
+
+/// Marks a free function as a Tesela `PolicyRule` and generates a
+/// companion struct with a `tesela_policy_rule()` associated function.
+///
+/// # Arguments
+///
+/// * `effect` — `"allow"` (default) or `"deny"`.
+/// * `roles` — comma-separated role names.
+/// * `operations` — comma-separated operations: `"read"`, `"mutate"`, etc.
+/// * `resource_kind` — optional resource kind filter.
+/// * `resource` — optional resource api_name filter.
+/// * `description` — rule description.
+/// * `priority` — numeric priority.
+#[proc_macro_attribute]
+pub fn policy(args: TokenStream, input: TokenStream) -> TokenStream {
+    policy_macro::expand(args, input)
+}
+
+/// Derive `tesela_trait()` for a struct.
+///
+/// Struct-level: `#[tesela(display = "...")]`
+/// Field-level: `#[tesela(description = "...", nullable)]`
+#[proc_macro_derive(TraitDef, attributes(tesela))]
+pub fn derive_trait_def(input: TokenStream) -> TokenStream {
+    trait_macro::expand(input)
+}
+
+/// Derive `tesela_pipeline()` for a struct.
+///
+/// Struct-level: `#[tesela(schedule = "0 * * * *", mode = "incremental", display = "...")]`
+///
+/// The struct must implement `fn steps() -> Vec<TransformStep>`.
+#[proc_macro_derive(Pipeline, attributes(tesela))]
+pub fn derive_pipeline(input: TokenStream) -> TokenStream {
+    pipeline_macro::expand(input)
 }

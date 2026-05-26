@@ -25,6 +25,9 @@ pub struct Role {
 pub struct PolicyRule {
     /// API name.
     pub api_name: ApiName,
+    /// Description.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub description: Option<String>,
     /// Allow or deny.
     pub effect: PolicyEffect,
     /// Specific actor user IDs this rule applies to.
