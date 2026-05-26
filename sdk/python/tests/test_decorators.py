@@ -88,7 +88,7 @@ def test_action_decorator():
     assert len(spec["actions"]) == 1
     act = spec["actions"][0]
     assert act["api_name"] == "send_invoice"
-    assert act["risk"] == "medium"
+    assert act["risk_level"] == "medium"
     assert act["description"] == "Send an invoice to a customer."
     props = act["input_schema"]["properties"]
     assert props["customer_id"]["type"] == "string"
@@ -148,7 +148,7 @@ def test_full_declarative_workflow():
     def create_customer(name: str, email: str) -> None:
         """Create a new customer record."""
 
-    @agent(app, model="claude-sonnet-4-6")
+    @agent(app, model="claude-sonnet-4-6", apxm_skill_id="sales-skill")
     class SalesAgent:
         INSTRUCTIONS = "Help sales reps."
         ALLOWED_TOOLS = ["search_customer", "create_customer"]
@@ -158,3 +158,4 @@ def test_full_declarative_workflow():
     assert len(spec["object_types"]) == 1
     assert len(spec["actions"]) == 1
     assert len(spec["agents"]) == 1
+    assert spec["agents"][0]["metadata"]["apxm_skill_id"] == "sales-skill"

@@ -15,7 +15,7 @@ tesela-core.workspace = true
 tesela-ir.workspace = true
 tesela-runtime.workspace = true
 
-sqlx.workspace = true
+sqlx-postgres.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 tracing.workspace = true

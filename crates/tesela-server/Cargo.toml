@@ -15,7 +15,6 @@ tesela-runtime = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 axum = { workspace = true }
-axum-server = { version = "0.7", features = ["tls-rustls"], optional = true }
 tokio = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true }
@@ -25,7 +24,6 @@ governor = { version = "0.7", optional = true }
 tracing = { workspace = true }
 
 [features]
-tls = ["dep:axum-server"]
 rate-limit = ["dep:governor"]
 
 [dev-dependencies]

@@ -30,6 +30,9 @@ class ActionBuilder:
         self._data["risk_level"] = r
         return self
 
+    def risk(self, r: str) -> "ActionBuilder":
+        return self.risk_level(r)
+
     def input_schema(self, schema: dict[str, Any]) -> "ActionBuilder":
         self._data["input_schema"] = schema
         return self
@@ -186,6 +189,10 @@ class AgentBuilder:
 
     def metadata(self, key: str, value: Any) -> "AgentBuilder":
         self._data.setdefault("metadata", {})[key] = value
+        return self
+
+    def apxm_skill(self, skill_id: str) -> "AgentBuilder":
+        self._data.setdefault("metadata", {})["apxm_skill_id"] = skill_id
         return self
 
     def done(self) -> App:

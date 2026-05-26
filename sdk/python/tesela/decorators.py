@@ -118,6 +118,7 @@ def action(
     app: App,
     *,
     risk_level: str = "low",
+    risk: str = "",
     handler: str = "callback",
     handler_target: str = "",
     display: str = "",
@@ -148,7 +149,7 @@ def action(
             app.action(fn.__name__)
             .handler(handler, target)
             .description(inspect.getdoc(fn) or "")
-            .risk_level(risk_level)
+            .risk_level(risk or risk_level)
             .input_schema({"type": "object", "properties": properties})
             .done()
         )
@@ -162,6 +163,7 @@ def agent(
     *,
     model: str,
     display: str = "",
+    apxm_skill_id: str = "",
 ) -> Any:
     """Decorator factory that registers a class as a Tesela Agent.
 
@@ -190,6 +192,9 @@ def agent(
         allowed_tools = getattr(cls, "ALLOWED_TOOLS", None)
         if allowed_tools:
             b.allow_tools(*allowed_tools)
+
+        if apxm_skill_id:
+            b.apxm_skill(apxm_skill_id)
 
         b.done()
         return cls

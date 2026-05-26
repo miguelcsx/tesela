@@ -50,7 +50,7 @@ tesela-ids = { path = "crates/tesela-ids", version = "0.1.0" }
 tesela-adapter-postgres = { path = "adapters/tesela-adapter-postgres", version = "0.1.0" }
 tesela-adapter-apxm = { path = "adapters/tesela-adapter-apxm", version = "0.1.0" }
 
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "json", "chrono", "uuid"] }
+sqlx-postgres = { version = "0.8", default-features = false, features = ["json", "chrono", "uuid"] }
 
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
@@ -69,7 +69,7 @@ tokio = { version = "1", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["trace", "cors", "limit", "timeout"] }
 hyper = { version = "1", features = ["full"] }
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 async-graphql = "7"
 async-graphql-axum = "7"
 jsonschema = "0.30"

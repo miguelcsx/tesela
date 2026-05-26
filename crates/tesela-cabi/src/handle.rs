@@ -11,6 +11,7 @@ use tesela_ir::Spec;
 use tesela_memory::MemoryBackend;
 use tesela_runtime::{
     audit::VecAuditSink,
+    ports::AgentRuntime,
     ports::{Backend, BackendFactory, BackendRegistry},
     runtime::{Runtime, RuntimeOptions},
 };
@@ -87,6 +88,17 @@ impl HandleTable {
 
     pub(crate) fn remove(&mut self, handle: u64) -> Option<Arc<Runtime>> {
         self.runtimes.remove(&handle)
+    }
+
+    pub(crate) fn replace(&mut self, handle: u64, rt: Arc<Runtime>) -> bool {
+        if let std::collections::hash_map::Entry::Occupied(mut entry) = self.runtimes.entry(handle)
+        {
+            entry.insert(rt);
+            self.last_error.clear();
+            true
+        } else {
+            false
+        }
     }
 
     pub(crate) fn set_error(&mut self, msg: &str) {
@@ -258,23 +270,38 @@ pub(crate) unsafe fn parse_spec(ptr: *const c_char, len: c_int) -> Result<Spec, 
         .ok_or_else(|| "compiler produced no spec".to_string())
 }
 
-pub(crate) fn build_runtime(
-    spec: Spec,
-    _backend_callbacks: &HashMap<String, CCallback>,
-) -> Result<Arc<Runtime>, String> {
+fn runtime_options(
+    spec: &Spec,
+    agent_runtime: Option<Arc<dyn AgentRuntime>>,
+) -> RuntimeOptions {
     let registry = Arc::new(CAbiBackendRegistry::new(&spec));
 
-    let opts = RuntimeOptions {
+    RuntimeOptions {
         backend_registry: Some(registry),
         audit_sink: Some(Arc::new(VecAuditSink::new())),
         object_store: Some(Arc::new(CAbiObjectStore)),
         message_bus: Some(Arc::new(CAbiMessageBus)),
         run_store: Some(Arc::new(CAbiRunStore)),
         capability_issuer: Some(Arc::new(CAbiCapabilityIssuer)),
+        agent_runtime,
         allow_dev_defaults: true,
         ..Default::default()
-    };
+    }
+}
 
+pub(crate) fn build_runtime(
+    spec: Spec,
+    _backend_callbacks: &HashMap<String, CCallback>,
+) -> Result<Arc<Runtime>, String> {
+    let opts = runtime_options(&spec, None);
+    Runtime::new(spec, opts).map_err(|e| e.to_string())
+}
+
+pub(crate) fn build_runtime_with_agent(
+    spec: Spec,
+    agent_runtime: Arc<dyn AgentRuntime>,
+) -> Result<Arc<Runtime>, String> {
+    let opts = runtime_options(&spec, Some(agent_runtime));
     Runtime::new(spec, opts).map_err(|e| e.to_string())
 }
 

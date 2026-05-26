@@ -461,6 +461,22 @@ class NativeRuntime:
             self._lib.tesela_runtime_agent_get_run_json, self._handle, run_id.encode()
         )
 
+    def configure_apxm_agent_runtime(
+        self,
+        base_url: str,
+        *,
+        timeout_seconds: int = 120,
+    ) -> dict[str, Any]:
+        config_raw = _json_bytes(
+            {"base_url": base_url, "timeout_seconds": timeout_seconds}
+        )
+        return self._call_buffer(
+            self._lib.tesela_runtime_configure_apxm_agent_runtime_json,
+            self._handle,
+            _ptr(config_raw),
+            len(config_raw),
+        )
+
     def health(self) -> HealthStatus:
         return _wrap_health(self._call_buffer(self._lib.tesela_runtime_health_json, self._handle))
 

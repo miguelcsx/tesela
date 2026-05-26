@@ -97,7 +97,7 @@ def test_actions():
     assert len(spec["actions"]) == 1
     action = spec["actions"][0]
     assert action["handler"]["kind"] == "webhook"
-    assert action["risk"] == "high"
+    assert action["risk_level"] == "high"
 
 
 def test_roles():
@@ -134,6 +134,7 @@ def test_agents():
         .model("claude-sonnet-4-6") \
         .instructions("You are a data analyst.") \
         .allow_tools("search", "get") \
+        .apxm_skill("skill-analyst") \
         .limits(max_tool_calls=20, timeout_seconds=120) \
         .memory(enabled=True, scope="user") \
         .requires_approval() \
@@ -146,6 +147,7 @@ def test_agents():
     assert agent["requires_approval"] is True
     assert agent["limits"]["max_tool_calls"] == 20
     assert agent["memory"]["scope"] == "user"
+    assert agent["metadata"]["apxm_skill_id"] == "skill-analyst"
 
 
 def test_custom_tools():

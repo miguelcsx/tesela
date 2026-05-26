@@ -1,4 +1,4 @@
-use sqlx::PgPool;
+use sqlx_postgres::PgPool;
 use std::sync::Arc;
 use tesela_core::{ApiName, Error, Value};
 use tesela_ir::{MutationResult, Page, Record};

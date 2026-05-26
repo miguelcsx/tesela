@@ -1,10 +1,19 @@
 //! Agent, system introspection, and registration exports.
 
 use crate::handle::*;
+use serde::Deserialize;
 use serde_json::json;
 use std::ffi::CStr;
 use std::os::raw::{c_char, c_int, c_void};
+use std::sync::Arc;
 use tesela_core::Value;
+
+#[derive(Deserialize)]
+struct ApxmAgentRuntimeConfig {
+    base_url: String,
+    #[serde(default)]
+    timeout_seconds: Option<u64>,
+}
 
 /// Start an agent run.
 ///
@@ -87,6 +96,73 @@ pub unsafe extern "C" fn tesela_runtime_agent_get_run_json(
             TeselaBuffer::empty()
         }
     }
+}
+
+/// Configure the runtime to execute agents through an APXM HTTP service.
+///
+/// Rebuilds the runtime handle with the current compiled spec and an APXM
+/// `AgentRuntime`. Existing callback registrations stay available because they
+/// live in the C ABI handle table.
+///
+/// # Safety
+/// `config_json` must be a valid UTF-8 buffer containing
+/// `{"base_url": "...", "timeout_seconds": 120}`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn tesela_runtime_configure_apxm_agent_runtime_json(
+    handle: u64,
+    config_json: *const c_char,
+    config_len: c_int,
+) -> TeselaBuffer {
+    let mut ht = lock_handles!(or return TeselaBuffer::empty());
+    let rt = match ht.get(handle).cloned() {
+        Some(r) => r,
+        None => {
+            ht.set_error("invalid handle");
+            return TeselaBuffer::empty();
+        }
+    };
+    let config: ApxmAgentRuntimeConfig = match unsafe { decode_json(config_json, config_len) } {
+        Ok(c) => c,
+        Err(e) => {
+            ht.set_error(&e);
+            return TeselaBuffer::empty();
+        }
+    };
+    if config.base_url.trim().is_empty() {
+        ht.set_error("base_url is required");
+        return TeselaBuffer::empty();
+    }
+    let timeout = config.timeout_seconds.unwrap_or(120);
+    let spec = match rt.spec() {
+        Ok(s) => s,
+        Err(e) => {
+            ht.set_error(&e.to_string());
+            return TeselaBuffer::empty();
+        }
+    };
+    let apxm = Arc::new(tesela_adapter_apxm::ApxmAgentRuntime::with_timeout(
+        config.base_url.clone(),
+        timeout,
+    ));
+    let next_rt = match build_runtime_with_agent(spec, apxm) {
+        Ok(r) => r,
+        Err(e) => {
+            ht.set_error(&e);
+            return TeselaBuffer::empty();
+        }
+    };
+    if !ht.replace(handle, next_rt) {
+        ht.set_error("invalid handle");
+        return TeselaBuffer::empty();
+    }
+    marshal_result(
+        &json!({
+            "agent_runtime": "apxm",
+            "base_url": config.base_url,
+            "timeout_seconds": timeout
+        }),
+        &mut ht,
+    )
 }
 
 /// Return health status JSON.

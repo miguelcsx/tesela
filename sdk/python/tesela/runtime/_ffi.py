@@ -67,6 +67,7 @@ _BUFFER_SIGS: dict[str, list] = {
     "tesela_runtime_rollback_upload_json": _ACTOR_CHARPTR_BLOB_BUFFER,
     "tesela_runtime_agent_start_json": _ACTOR_CHARPTR_BLOB_BUFFER,
     "tesela_runtime_agent_get_run_json": [_c.c_uint64, _c.c_char_p],
+    "tesela_runtime_configure_apxm_agent_runtime_json": [_c.c_uint64, _c.c_void_p, _c.c_int],
     "tesela_runtime_health_json": _HANDLE_ONLY_BUFFER,
     "tesela_runtime_capabilities_json": _HANDLE_ONLY_BUFFER,
     "tesela_runtime_vector_search_json": _ACTOR_BLOB_BUFFER,
