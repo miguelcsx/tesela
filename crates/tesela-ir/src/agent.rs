@@ -61,6 +61,9 @@ pub struct Agent {
     pub metadata: Option<BTreeMap<String, Value>>,
 }
 
+/// Alias for the canonical agent definition type.
+pub type AgentDefinition = Agent;
+
 /// Agent memory configuration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AgentMemory {
@@ -144,6 +147,36 @@ pub struct CustomTool {
     /// Deprecation timestamp.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub deprecated_at: Option<String>,
+    /// Metadata.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub metadata: Option<BTreeMap<String, Value>>,
+}
+
+/// A tool invocation requested or performed during an agent run.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ToolCall {
+    /// Tool call identifier.
+    pub id: String,
+    /// Tool API name or runtime tool name.
+    pub tool: String,
+    /// Arguments supplied to the tool.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub arguments: Option<Value>,
+    /// Tool call status.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub status: Option<String>,
+    /// Tool result payload.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub result: Option<Value>,
+    /// Error message.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub error: Option<String>,
+    /// Start timestamp.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub started_at: Option<String>,
+    /// Completion timestamp.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub completed_at: Option<String>,
     /// Metadata.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub metadata: Option<BTreeMap<String, Value>>,

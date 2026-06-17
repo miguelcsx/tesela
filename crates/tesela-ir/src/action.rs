@@ -55,3 +55,65 @@ pub struct ActionHandler {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub config: Option<BTreeMap<String, Value>>,
 }
+
+/// A proposed action invocation awaiting validation, approval, or execution.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ActionProposal {
+    /// Proposal identifier.
+    pub id: String,
+    /// Action API name.
+    pub action: ApiName,
+    /// Optional subject resource API name.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub subject: Option<ApiName>,
+    /// Input payload proposed for the action.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub input: Option<Value>,
+    /// Actor or system that proposed the action.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub proposed_by: Option<String>,
+    /// Human-readable reason for the proposal.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub reason: Option<String>,
+    /// Whether approval is required before execution.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub requires_approval: Option<bool>,
+    /// Creation timestamp.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub created_at: Option<String>,
+    /// Metadata.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub metadata: Option<BTreeMap<String, Value>>,
+}
+
+/// A concrete action execution attempt.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ActionRun {
+    /// Run identifier.
+    pub id: String,
+    /// Action API name.
+    pub action: ApiName,
+    /// Proposal that created this run, when applicable.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub proposal_id: Option<String>,
+    /// Execution status.
+    pub status: String,
+    /// Input payload used for execution.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub input: Option<Value>,
+    /// Output payload produced by execution.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub output: Option<Value>,
+    /// Error message.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub error: Option<String>,
+    /// Start timestamp.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub started_at: Option<String>,
+    /// Completion timestamp.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub completed_at: Option<String>,
+    /// Metadata.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub metadata: Option<BTreeMap<String, Value>>,
+}

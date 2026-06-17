@@ -2,8 +2,8 @@
 
 use crate::{
     ActionType, Agent, AggregateView, ArtifactType, Asset, CapabilityGrant, CustomTool,
-    Environment, EventType, JobType, LinkType, ObjectSet, ObjectType, PolicyRule, Role, Trait,
-    TransformPipeline, UploadFlow,
+    Environment, EventType, FunctionDefinition, JobType, LayerDefinition, LinkType, ObjectSet,
+    ObjectType, PolicyRule, Role, Trait, TransformPipeline, UploadFlow, WorkflowDefinition,
 };
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
@@ -44,6 +44,15 @@ pub struct Spec {
     /// Agent definitions.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub agents: Vec<Agent>,
+    /// Layer definitions.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub layers: Vec<LayerDefinition>,
+    /// Function definitions.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub functions: Vec<FunctionDefinition>,
+    /// Workflow definitions.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub workflows: Vec<WorkflowDefinition>,
     /// Custom tool definitions.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub custom_tools: Vec<CustomTool>,
@@ -142,6 +151,21 @@ impl Spec {
         upsert_by_name(&mut self.agents, item);
     }
 
+    /// Add or replace a layer by api_name.
+    pub fn upsert_layer(&mut self, item: LayerDefinition) {
+        upsert_by_name(&mut self.layers, item);
+    }
+
+    /// Add or replace a function by api_name.
+    pub fn upsert_function(&mut self, item: FunctionDefinition) {
+        upsert_by_name(&mut self.functions, item);
+    }
+
+    /// Add or replace a workflow by api_name.
+    pub fn upsert_workflow(&mut self, item: WorkflowDefinition) {
+        upsert_by_name(&mut self.workflows, item);
+    }
+
     /// Add or replace a trait by api_name.
     pub fn upsert_trait(&mut self, item: Trait) {
         upsert_by_name(&mut self.traits, item);
@@ -160,6 +184,9 @@ impl Spec {
             "action" => remove_by_name(&mut self.actions, api_name),
             "policy" => remove_by_name(&mut self.policies, api_name),
             "agent" => remove_by_name(&mut self.agents, api_name),
+            "layer" => remove_by_name(&mut self.layers, api_name),
+            "function" => remove_by_name(&mut self.functions, api_name),
+            "workflow" => remove_by_name(&mut self.workflows, api_name),
             "trait" => remove_by_name(&mut self.traits, api_name),
             "pipeline" => remove_by_name(&mut self.pipelines, api_name),
             "role" => remove_by_name(&mut self.roles, api_name),
@@ -186,6 +213,9 @@ impl Spec {
             && self.roles.is_empty()
             && self.policies.is_empty()
             && self.agents.is_empty()
+            && self.layers.is_empty()
+            && self.functions.is_empty()
+            && self.workflows.is_empty()
             && self.custom_tools.is_empty()
             && self.assets.is_empty()
             && self.environments.is_empty()
@@ -213,6 +243,9 @@ impl Default for Spec {
             roles: Vec::new(),
             policies: Vec::new(),
             agents: Vec::new(),
+            layers: Vec::new(),
+            functions: Vec::new(),
+            workflows: Vec::new(),
             custom_tools: Vec::new(),
             assets: Vec::new(),
             environments: Vec::new(),
@@ -273,6 +306,9 @@ impl_has_api_name!(
     ActionType,
     PolicyRule,
     Agent,
+    LayerDefinition,
+    FunctionDefinition,
+    WorkflowDefinition,
     Trait,
     TransformPipeline,
     Role,

@@ -34,6 +34,12 @@ use tesela_runtime::{
     runtime::Runtime,
 };
 
+mod contract;
+
+pub use contract::{
+    FieldProjection, graphql_has_any_field, graphql_has_field, graphql_page, project_record,
+};
+
 // ---------------------------------------------------------------------------
 // GraphQLOptions
 // ---------------------------------------------------------------------------
