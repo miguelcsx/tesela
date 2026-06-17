@@ -1,0 +1,20 @@
+[package]
+name = "tesela-adapter-gcs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+repository.workspace = true
+description = "Google Cloud Storage object store adapter for Tesela"
+keywords = ["tesela", "gcs", "storage", "adapter"]
+categories = ["filesystem"]
+
+[dependencies]
+tesela-core.workspace = true
+tesela-runtime.workspace = true
+
+chrono.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true

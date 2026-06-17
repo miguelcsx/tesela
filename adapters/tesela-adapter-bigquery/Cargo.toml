@@ -1,0 +1,21 @@
+[package]
+name = "tesela-adapter-bigquery"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+repository.workspace = true
+description = "BigQuery backend adapter for the Tesela runtime"
+keywords = ["tesela", "bigquery", "database", "adapter"]
+categories = ["database"]
+
+[dependencies]
+tesela-core.workspace = true
+tesela-ir.workspace = true
+tesela-runtime.workspace = true
+
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
