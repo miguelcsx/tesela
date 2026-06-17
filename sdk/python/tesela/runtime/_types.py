@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
-import json
 from typing import Any
-
-import ctypes
 
 
 class NativeError(RuntimeError):
@@ -85,41 +82,6 @@ class HealthStatus:
 
     def to_dict(self) -> dict[str, Any]:
         return self._data
-
-
-class Subscription:
-    def __init__(self, lib: ctypes.CDLL, sub_handle: int):
-        self._lib = lib
-        self._handle = sub_handle
-
-    def poll(self, timeout_ms: int = 0) -> dict[str, Any] | None:
-        buf = self._lib.tesela_runtime_subscribe_poll(self._handle, timeout_ms)
-        if not buf.data or buf.len <= 0:
-            return None
-        try:
-            raw = ctypes.string_at(buf.data, buf.len)
-            return json.loads(raw.decode())
-        finally:
-            self._lib.tesela_buffer_free(buf)
-
-    def close(self) -> None:
-        self._lib.tesela_runtime_subscribe_close(self._handle)
-        self._handle = 0
-
-    def __enter__(self) -> Subscription:
-        return self
-
-    def __exit__(self, *_: Any) -> None:
-        self.close()
-
-    def __iter__(self):
-        return self
-
-    def __next__(self) -> dict[str, Any]:
-        ev = self.poll(timeout_ms=-1)
-        if ev is None:
-            raise StopIteration
-        return ev
 
 
 def _wrap_record(data: dict[str, Any] | None) -> Record | None:

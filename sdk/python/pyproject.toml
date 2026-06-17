@@ -25,15 +25,14 @@ Repository = "https://github.com/miguelcsx/tesela"
 Issues = "https://github.com/miguelcsx/tesela/issues"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.9,<2"]
+build-backend = "maturin"
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "mypy>=1.0"]
+dev = ["maturin>=1.9,<2", "pytest>=7.0", "mypy>=1.0"]
 
-[tool.hatch.build.targets.wheel]
-packages = ["tesela"]
-artifacts = ["tesela/libtesela_cabi*.so", "tesela/libtesela_cabi*.dylib", "tesela/tesela_cabi*.dll"]
-
-[tool.hatch.build.targets.sdist]
+[tool.maturin]
+manifest-path = "../../crates/tesela-py/Cargo.toml"
+module-name = "tesela._native"
+python-source = "."
 include = ["tesela", "tests", "examples", "pyproject.toml", "README.md"]

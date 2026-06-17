@@ -24,7 +24,7 @@ lint: rust-clippy ## Run Clippy with warnings denied.
 test: rust-test python-test ## Run Rust and Python tests.
 
 .PHONY: build
-build: rust-build build-cabi ## Build Rust crates and the native ABI library.
+build: rust-build python-build ## Build Rust crates and the Python extension package.
 
 .PHONY: verify
 verify: rust-fmt-check rust-clippy rust-test python-test ## Run the local pre-push gate.
@@ -61,36 +61,13 @@ rust-doc: ## Build Rust documentation.
 rust-package: ## Check crate package metadata without publishing.
 	cargo package --workspace --allow-dirty --no-verify
 
-.PHONY: build-cabi
-build-cabi: ## Build the native runtime shared library used by Python.
-	cargo build -p tesela-cabi --release
-	mkdir -p dist sdk/python/tesela
-	cp target/release/libtesela_cabi.so dist/libtesela_cabi.so 2>/dev/null || \
-	  cp target/release/libtesela_cabi.dylib dist/libtesela_cabi.dylib 2>/dev/null || \
-	  cp target/release/tesela_cabi.dll dist/tesela_cabi.dll 2>/dev/null || true
-	cp target/release/libtesela_cabi.so sdk/python/tesela/ 2>/dev/null || \
-	  cp target/release/libtesela_cabi.dylib sdk/python/tesela/ 2>/dev/null || \
-	  cp target/release/tesela_cabi.dll sdk/python/tesela/ 2>/dev/null || true
-	@echo "Native library written to dist/ and sdk/python/tesela/"
-
-.PHONY: build-cabi-debug
-build-cabi-debug: ## Build the native runtime shared library in debug mode.
-	cargo build -p tesela-cabi
-	mkdir -p dist sdk/python/tesela
-	cp target/debug/libtesela_cabi.so dist/libtesela_cabi.so 2>/dev/null || \
-	  cp target/debug/libtesela_cabi.dylib dist/libtesela_cabi.dylib 2>/dev/null || \
-	  cp target/debug/tesela_cabi.dll dist/tesela_cabi.dll 2>/dev/null || true
-	cp target/debug/libtesela_cabi.so sdk/python/tesela/ 2>/dev/null || \
-	  cp target/debug/libtesela_cabi.dylib sdk/python/tesela/ 2>/dev/null || \
-	  cp target/debug/tesela_cabi.dll sdk/python/tesela/ 2>/dev/null || true
-
 .PHONY: python-test
-python-test: ## Run Python SDK tests against the selected native library.
+python-test: ## Run Python SDK tests against the PyO3 extension.
 	cd sdk/python && PYTHONPATH=. $(PYTHON) -m pytest tests/ -v
 
 .PHONY: python-build
 python-build: ## Build Python sdist/wheel.
-	cd sdk/python && $(PYTHON) -m build
+	cd sdk/python && $(PYTHON) -m maturin build
 
 .PHONY: clean
 clean: ## Remove local build artifacts.

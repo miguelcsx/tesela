@@ -10,7 +10,6 @@ import dataclasses
 import inspect
 import typing
 import json
-from pathlib import Path
 from typing import Any
 
 _PY_TO_TESELA = {str: "string", int: "integer", float: "float", bool: "boolean", list: "array"}
@@ -226,11 +225,10 @@ class App:
     def compile_json(self, indent: int = 2) -> str:
         return json.dumps(self.compile(), indent=indent)
 
-    def run(self, lib_path: str | None = None):
+    def run(self):
         """Load native runtime."""
         from tesela.runtime import NativeRuntime
-        path = Path(lib_path) if lib_path else Path(__file__).parent.parent.parent / "dist" / "libtesela.so"
-        return NativeRuntime.from_app(self, library_path=path)
+        return NativeRuntime.from_app(self)
 
     # ------------------------------------------------------------------
     # Decorator factories (support both @app.entity and @app.entity(...))

@@ -50,10 +50,10 @@ pip install -e ".[dev]"
 pytest
 ```
 
-For local development with a custom native library build:
+For local development with the native PyO3 module:
 
 ```bash
-export TESELA_NATIVE_LIB=/path/to/libtesela_cabi.so
+python -m maturin develop
 pytest
 ```
 

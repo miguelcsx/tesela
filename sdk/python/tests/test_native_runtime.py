@@ -1,15 +1,9 @@
-import os
-
 import pytest
 
 from tesela import App, NativeRuntime, String
 
 
 def test_native_runtime_search_with_callback_backend():
-    lib = os.environ.get("TESELA_NATIVE_LIB")
-    if not lib:
-        pytest.skip("TESELA_NATIVE_LIB is not set")
-
     app = App("native")
     app.datasource("main", "python")
     app.object_type("customer") \
@@ -31,7 +25,7 @@ def test_native_runtime_search_with_callback_backend():
             }
         raise AssertionError(req["op"])
 
-    with NativeRuntime.from_app(app, library_path=lib) as rt:
+    with NativeRuntime.from_app(app) as rt:
         rt.register_backend("python", backend)
         page = rt.search("customer", {"limit": 10})
 
@@ -39,10 +33,6 @@ def test_native_runtime_search_with_callback_backend():
 
 
 def test_native_runtime_callback_error_propagates():
-    lib = os.environ.get("TESELA_NATIVE_LIB")
-    if not lib:
-        pytest.skip("TESELA_NATIVE_LIB is not set")
-
     app = App("native")
     app.datasource("main", "python")
     app.object_type("customer") \
@@ -56,7 +46,7 @@ def test_native_runtime_callback_error_propagates():
             return {"search": {"enabled": True}, "get": True}
         raise RuntimeError("backend exploded")
 
-    with NativeRuntime.from_app(app, library_path=lib) as rt:
+    with NativeRuntime.from_app(app) as rt:
         rt.register_backend("python", backend)
         with pytest.raises(Exception) as exc:
             rt.search("customer", {"limit": 10})

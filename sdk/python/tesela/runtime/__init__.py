@@ -6,7 +6,6 @@ from tesela.runtime._types import (
     ActionResult,
     ExplainPlan,
     HealthStatus,
-    Subscription,
 )
 from tesela.runtime._sync import NativeRuntime
 from tesela.runtime._async import AsyncNativeRuntime
@@ -21,5 +20,4 @@ __all__ = [
     "ActionResult",
     "ExplainPlan",
     "HealthStatus",
-    "Subscription",
 ]

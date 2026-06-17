@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import functools
-import os
 from typing import Any
 
 from tesela.runtime._sync import NativeRuntime
@@ -14,20 +13,16 @@ class AsyncNativeRuntime:
         self._rt = runtime
 
     @classmethod
-    async def from_app(
-        cls, app: Any, *, library_path: str | os.PathLike[str] | None = None
-    ) -> AsyncNativeRuntime:
-        rt = await asyncio.to_thread(NativeRuntime.from_app, app, library_path=library_path)
+    async def from_app(cls, app: Any) -> AsyncNativeRuntime:
+        rt = await asyncio.to_thread(NativeRuntime.from_app, app)
         return cls(rt)
 
     @classmethod
     async def from_spec(
         cls,
         spec: dict[str, Any] | str | bytes,
-        *,
-        library_path: str | os.PathLike[str] | None = None,
     ) -> AsyncNativeRuntime:
-        rt = await asyncio.to_thread(lambda: NativeRuntime(spec, library_path=library_path))
+        rt = await asyncio.to_thread(lambda: NativeRuntime(spec))
         return cls(rt)
 
     def __getattr__(self, name: str):
@@ -42,4 +37,4 @@ class AsyncNativeRuntime:
         return _async
 
     def __repr__(self) -> str:
-        return f"AsyncNativeRuntime(handle={self._rt._handle})"
+        return "AsyncNativeRuntime()"
