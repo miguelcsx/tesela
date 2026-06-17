@@ -1,24 +1,22 @@
 [package]
-name = "tesela-cabi"
+name = "tesela-py"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-publish = false
 repository.workspace = true
-description = "C ABI shared library exposing the Tesela runtime for FFI consumers (Python, etc.)."
+description = "PyO3 native Python bindings for the Tesela runtime."
 
 [lib]
-# Compile as a C-compatible shared library.
-crate-type = ["cdylib", "staticlib"]
+name = "_native"
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+pyo3 = { workspace = true, features = ["extension-module"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
 tesela-core = { workspace = true }
 tesela-ir = { workspace = true }
 tesela-compiler = { workspace = true }
 tesela-runtime = { workspace = true }
 tesela-memory = { workspace = true }
-tesela-adapter-apxm = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-libc = "0.2"
