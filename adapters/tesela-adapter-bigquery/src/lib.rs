@@ -10,14 +10,15 @@ use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde_json::{Value as JsonValue, json};
 use tesela_core::{ApiName, Error, Value};
-use tesela_ir::{AggregateResult, Datasource, MutationResult, Page, Record};
+use tesela_ir::{AggregateResult, Datasource, MutationResult, Page, Record, Spec};
 use tesela_runtime::{
     ports::{Aggregator, Backend, BackendFactory, Getter, Mutator, Searcher},
     query::{AggregateQuery, BackendCapabilities, Mutation, Query},
 };
 
 use crate::sql::{
-    aggregate_sql, delete_sql, get_sql, insert_sql, search_sql, update_sql, upsert_sql,
+    aggregate_sql, create_table_sql, delete_sql, get_sql, insert_sql, search_sql, update_sql,
+    upsert_sql,
 };
 
 /// BigQuery adapter configuration.
@@ -71,6 +72,26 @@ impl BigQueryBackend {
     /// Create a backend from a Tesela datasource.
     pub fn open(ds: &Datasource) -> Result<Arc<Self>, Error> {
         Self::new(BigQueryConfig::from_datasource(ds)?)
+    }
+
+    /// Create missing BigQuery tables for object types owned by the selected datasources.
+    ///
+    /// Existing tables are left untouched. This is intentionally additive so callers can run it at
+    /// startup without performing destructive schema migration.
+    pub fn ensure_tables_for_datasources(
+        &self,
+        spec: &Spec,
+        datasources: &[ApiName],
+    ) -> Result<(), Error> {
+        for object_type in &spec.object_types {
+            if datasources.contains(&object_type.source.datasource) {
+                self.query(
+                    create_table_sql(&self.config.project_id, &self.config.dataset, object_type)?,
+                    Vec::new(),
+                )?;
+            }
+        }
+        Ok(())
     }
 
     fn query(&self, sql: String, params: Vec<QueryParam>) -> Result<QueryResponse, Error> {

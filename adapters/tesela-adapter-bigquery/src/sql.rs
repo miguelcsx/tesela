@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use tesela_core::{ApiName, Error, FilterOp, Value};
-use tesela_ir::Filter;
+use tesela_core::{ApiName, DataType, Error, FilterOp, Value};
+use tesela_ir::{Filter, ObjectType};
 use tesela_runtime::query::{AggregateQuery, Query};
 
 use crate::QueryParam;
@@ -102,6 +102,51 @@ pub(crate) fn aggregate_sql(
     }
     sql.push_str(" LIMIT 10000");
     Ok((sql, params))
+}
+
+pub(crate) fn create_table_sql(
+    project_id: &str,
+    dataset: &str,
+    object_type: &ObjectType,
+) -> Result<String, Error> {
+    let columns = object_type
+        .properties
+        .iter()
+        .map(|property| {
+            let mode = if property.nullable == Some(false) {
+                " NOT NULL"
+            } else {
+                ""
+            };
+            Ok(format!(
+                "{} {}{mode}",
+                field(&property.api_name)?,
+                bigquery_type(property.data_type)
+            ))
+        })
+        .collect::<Result<Vec<_>, Error>>()?
+        .join(", ");
+    Ok(format!(
+        "CREATE TABLE IF NOT EXISTS {} ({columns})",
+        table(project_id, dataset, &object_type.api_name)?
+    ))
+}
+
+fn bigquery_type(data_type: DataType) -> &'static str {
+    match data_type {
+        DataType::Integer | DataType::BigInt => "INT64",
+        DataType::Float => "FLOAT64",
+        DataType::Decimal => "NUMERIC",
+        DataType::Boolean => "BOOL",
+        DataType::Json | DataType::Array | DataType::Vector(_) => "JSON",
+        DataType::Date
+        | DataType::Timestamp
+        | DataType::TimestampTz
+        | DataType::String
+        | DataType::Uuid
+        | DataType::Geometry
+        | DataType::Enum => "STRING",
+    }
 }
 
 pub(crate) fn get_sql(
@@ -378,12 +423,12 @@ fn table(project_id: &str, dataset: &str, object_type: &ApiName) -> Result<Strin
         "`{}.{}.{}`",
         segment(project_id)?,
         segment(dataset)?,
-        segment(&object_type.to_string())?
+        segment(object_type.as_ref())?
     ))
 }
 
 fn field(value: &ApiName) -> Result<String, Error> {
-    Ok(format!("`{}`", segment(&value.to_string())?))
+    Ok(format!("`{}`", segment(value.as_ref())?))
 }
 
 fn segment(value: &str) -> Result<&str, Error> {
@@ -408,7 +453,7 @@ fn require_values(values: &BTreeMap<ApiName, Value>) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use tesela_core::{FilterOp, Value};
-    use tesela_ir::Filter;
+    use tesela_ir::{Filter, ObjectSource, Property};
     use tesela_runtime::query::Query;
 
     use super::*;
@@ -474,6 +519,78 @@ mod tests {
         assert!(params.is_empty());
         assert!(sql.contains("SELECT `mode`, COUNT(*) AS `trips`"));
         assert!(sql.contains("GROUP BY `mode`"));
+    }
+
+    #[test]
+    fn create_table_uses_object_type_schema() {
+        let object_type = ObjectType {
+            api_name: ApiName::new_unchecked("agent_session"),
+            display: None,
+            description: None,
+            source: ObjectSource {
+                datasource: ApiName::new_unchecked("operational"),
+                resource: None,
+            },
+            primary_key: ApiName::new_unchecked("id"),
+            properties: vec![
+                Property {
+                    api_name: ApiName::new_unchecked("id"),
+                    display: None,
+                    description: None,
+                    data_type: DataType::String,
+                    nullable: Some(false),
+                    indexed: None,
+                    unique: None,
+                    tags: Vec::new(),
+                    markings: Vec::new(),
+                    default: None,
+                    computed: None,
+                    source_column: None,
+                    allowed_values: None,
+                    sort_order: None,
+                    metadata: None,
+                    encrypted: None,
+                    quality: Vec::new(),
+                },
+                Property {
+                    api_name: ApiName::new_unchecked("payload"),
+                    display: None,
+                    description: None,
+                    data_type: DataType::Json,
+                    nullable: None,
+                    indexed: None,
+                    unique: None,
+                    tags: Vec::new(),
+                    markings: Vec::new(),
+                    default: None,
+                    computed: None,
+                    source_column: None,
+                    allowed_values: None,
+                    sort_order: None,
+                    metadata: None,
+                    encrypted: None,
+                    quality: Vec::new(),
+                },
+            ],
+            traits: Vec::new(),
+            tags: Vec::new(),
+            metadata: None,
+            indexes: Vec::new(),
+            temporal: None,
+            lifecycle: None,
+            scoring: None,
+            classification: None,
+            quality_rules: Vec::new(),
+            lineage: Vec::new(),
+            deprecated_at: None,
+        };
+
+        let sql = create_table_sql("project", "dataset", &object_type).unwrap();
+
+        assert_eq!(
+            sql,
+            "CREATE TABLE IF NOT EXISTS `project.dataset.agent_session` (`id` STRING NOT NULL, `payload` JSON)"
+        );
     }
 
     #[test]
