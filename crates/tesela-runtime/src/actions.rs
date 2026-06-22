@@ -41,23 +41,6 @@ impl ActionDispatcher for DefaultActionDispatcher {
     }
 }
 
-/// Handler that delegates CRUD operations to the runtime.
-///
-/// This is a placeholder: the real implementation needs an `Arc<Runtime>`.
-/// For now it returns an error indicating runtime linkage is required.
-pub struct CRUDHandler;
-
-impl ActionHandler for CRUDHandler {
-    fn execute(&self, req: ActionRequest) -> Result<ActionResult, Error> {
-        Ok(ActionResult {
-            status: "success".to_string(),
-            output: Some(req.input),
-            error: None,
-            run_id: req.run_id,
-        })
-    }
-}
-
 /// Handler that POSTs to a configured webhook URL.
 pub struct WebhookHandler {
     url: String,

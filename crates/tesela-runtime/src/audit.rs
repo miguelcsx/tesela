@@ -92,6 +92,7 @@ impl Default for BufferedAuditConfig {
 /// [`AuditOverflowPolicy::Drop`].
 pub struct BufferedAuditSink {
     tx: Option<std::sync::mpsc::SyncSender<AuditRecord>>,
+    fallback: Option<Arc<dyn AuditSink>>,
     drop_count: Arc<Mutex<u64>>,
     overflow_policy: AuditOverflowPolicy,
     handle: Option<std::thread::JoinHandle<()>>,
@@ -103,6 +104,7 @@ impl BufferedAuditSink {
         let (tx, rx) = std::sync::mpsc::sync_channel::<AuditRecord>(config.buffer_size);
         let drop_count = Arc::new(Mutex::new(0u64));
 
+        let fallback = inner.clone();
         let drop_count_bg = drop_count.clone();
         let handle = std::thread::Builder::new()
             .name("tesela-audit-flush".to_string())
@@ -129,14 +131,19 @@ impl BufferedAuditSink {
                         }
                     }
                 }
-            })
-            .expect("failed to spawn audit flush thread");
+            });
+
+        let (tx, fallback, handle) = match handle {
+            Ok(handle) => (Some(tx), None, Some(handle)),
+            Err(_) => (None, Some(fallback), None),
+        };
 
         Self {
-            tx: Some(tx),
+            tx,
+            fallback,
             drop_count,
             overflow_policy: config.overflow_policy,
-            handle: Some(handle),
+            handle,
         }
     }
 
@@ -167,10 +174,12 @@ impl Drop for BufferedAuditSink {
 
 impl AuditSink for BufferedAuditSink {
     fn write_audit(&self, record: AuditRecord) -> Result<(), Error> {
-        let tx = self
-            .tx
-            .as_ref()
-            .ok_or_else(|| Error::internal("audit sink shut down"))?;
+        let Some(tx) = self.tx.as_ref() else {
+            return match &self.fallback {
+                Some(sink) => sink.write_audit(record),
+                None => Err(Error::internal("audit sink shut down")),
+            };
+        };
         match tx.try_send(record) {
             Ok(()) => Ok(()),
             Err(std::sync::mpsc::TrySendError::Full(_)) => {

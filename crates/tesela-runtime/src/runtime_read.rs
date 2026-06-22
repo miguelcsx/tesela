@@ -56,7 +56,7 @@ impl Runtime {
         }
 
         for record in &mut page.records {
-            crate::computed::materialize_computed(record, &ot, self.computed_evaluator.as_deref());
+            crate::computed::materialize_computed(record, &ot, self.computed_evaluator.as_deref())?;
         }
 
         self.run_obligations(actor, &decision, &BTreeMap::new())?;
@@ -109,7 +109,11 @@ impl Runtime {
             apply_redactions(&mut record, &decision.redactions);
         }
 
-        crate::computed::materialize_computed(&mut record, &ot, self.computed_evaluator.as_deref());
+        crate::computed::materialize_computed(
+            &mut record,
+            &ot,
+            self.computed_evaluator.as_deref(),
+        )?;
 
         self.run_obligations(actor, &decision, &BTreeMap::new())?;
 

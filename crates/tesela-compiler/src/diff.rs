@@ -60,18 +60,22 @@ pub fn compute_diff(old: &Spec, new: &Spec) -> Diff {
 
         for (name, old_item) in &old_map {
             if let Some(new_item) = new_map.get(name) {
-                let old_json =
-                    serde_json::to_value(*old_item).expect("IR types are always JSON-serializable");
-                let new_json =
-                    serde_json::to_value(*new_item).expect("IR types are always JSON-serializable");
-                if old_json != new_json {
-                    diff.changed.push(DiffEntry {
-                        api_name: name.clone(),
-                        kind: kind.to_string(),
-                        breaking: is_breaking_change(*old_item, *new_item),
-                        description: format!("{} '{}' changed", kind, name),
-                    });
+                let changed = match (
+                    serde_json::to_value(*old_item),
+                    serde_json::to_value(*new_item),
+                ) {
+                    (Ok(old_json), Ok(new_json)) => old_json != new_json,
+                    _ => true,
+                };
+                if !changed {
+                    continue;
                 }
+                diff.changed.push(DiffEntry {
+                    api_name: name.clone(),
+                    kind: kind.to_string(),
+                    breaking: is_breaking_change(*old_item, *new_item),
+                    description: format!("{} '{}' changed", kind, name),
+                });
             } else {
                 diff.removed.push(DiffEntry {
                     api_name: name.clone(),

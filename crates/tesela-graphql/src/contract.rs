@@ -39,6 +39,34 @@ impl FieldProjection {
     }
 }
 
+/// Borrowed GraphQL document inspector for lightweight contract routing.
+#[derive(Debug, Clone, Copy)]
+pub struct GraphQLDocument<'a> {
+    document: &'a str,
+}
+
+impl<'a> GraphQLDocument<'a> {
+    /// Create an inspector for a GraphQL document.
+    pub fn new(document: &'a str) -> Self {
+        Self { document }
+    }
+
+    /// Return true when the document references a field or operation name.
+    pub fn has_field(&self, field: &str) -> bool {
+        graphql_has_field(self.document, field)
+    }
+
+    /// Return true when the document references any field in the iterator.
+    pub fn has_any_field<'b>(&self, fields: impl IntoIterator<Item = &'b str>) -> bool {
+        graphql_has_any_field(self.document, fields)
+    }
+
+    /// Return true when the document calls a field with GraphQL arguments.
+    pub fn has_call(&self, field: &str) -> bool {
+        graphql_has_call(self.document, field)
+    }
+}
+
 /// Project a Tesela record into a GraphQL-facing JSON object.
 pub fn project_record(record: &Record, fields: &[FieldProjection]) -> JsonValue {
     let mut object = Map::new();
@@ -68,6 +96,20 @@ pub fn graphql_has_field(document: &str, field: &str) -> bool {
         let before = document[..start].chars().next_back();
         let after = document[start + field.len()..].chars().next();
         !before.is_some_and(is_ident_char) && !after.is_some_and(is_ident_char)
+    })
+}
+
+/// Return true when a GraphQL document references `field(...)`.
+pub fn graphql_has_call(document: &str, field: &str) -> bool {
+    document.match_indices(field).any(|(start, _)| {
+        let before = document[..start].chars().next_back();
+        if before.is_some_and(is_ident_char) {
+            return false;
+        }
+        document[start + field.len()..]
+            .chars()
+            .find(|value| !value.is_whitespace())
+            .is_some_and(|value| value == '(')
     })
 }
 
@@ -137,5 +179,16 @@ mod tests {
         assert!(graphql_has_field(query, "scenario"));
         assert!(!graphql_has_field(query, "scenarioStat"));
         assert!(graphql_has_any_field(query, ["zones", "scenarioStats"]));
+    }
+
+    #[test]
+    fn detects_graphql_field_calls() {
+        let query = "query { scenario (id: $id) { id } scenarioStats { totalTrips } }";
+        let document = GraphQLDocument::new(query);
+
+        assert!(graphql_has_call(query, "scenario"));
+        assert!(document.has_call("scenario"));
+        assert!(!graphql_has_call(query, "scenarioStats"));
+        assert!(!graphql_has_call(query, "scenarioStat"));
     }
 }

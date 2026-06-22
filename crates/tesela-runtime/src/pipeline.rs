@@ -45,8 +45,10 @@ impl PipelineConditionEvaluator for SimplePipelineConditionEvaluator {
             let negated = expr.contains("!=");
             let actual = ctx.variables.get(var).or_else(|| ctx.metadata.get(var));
             let matches = match actual {
-                Some(v) if v.as_str().is_some() => v.as_str().unwrap() == val,
-                Some(other) => other.to_string().trim_matches('"') == val,
+                Some(v) => match v.as_str() {
+                    Some(value) => value == val,
+                    None => v.to_string().trim_matches('"') == val,
+                },
                 None => val.is_empty(),
             };
             return Ok(if negated { !matches } else { matches });

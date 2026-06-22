@@ -37,7 +37,8 @@ use tesela_runtime::{
 mod contract;
 
 pub use contract::{
-    FieldProjection, graphql_has_any_field, graphql_has_field, graphql_page, project_record,
+    FieldProjection, GraphQLDocument, graphql_has_any_field, graphql_has_call, graphql_has_field,
+    graphql_page, project_record,
 };
 
 // ---------------------------------------------------------------------------

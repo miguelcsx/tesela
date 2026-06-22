@@ -4,7 +4,7 @@ mod default_runtime;
 mod tools;
 
 pub use default_runtime::{DefaultAgentRuntime, DefaultAgentRuntimeOptions};
-pub use tools::AgentOrchestrator;
+pub use tools::{AgentOrchestrator, ontology_tools};
 
 use crate::constants::*;
 use crate::ports::{Compactor, ModelProvider};

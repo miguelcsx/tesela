@@ -3,131 +3,65 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact: libtesela_cabi.so
-            wheel_plat: manylinux_2_17_x86_64
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            artifact: libtesela_cabi.so
-            wheel_plat: manylinux_2_17_aarch64
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact: libtesela_cabi.dylib
-            wheel_plat: macosx_11_0_x86_64
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            artifact: libtesela_cabi.dylib
-            wheel_plat: macosx_11_0_arm64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact: tesela_cabi.dll
-            wheel_plat: win_amd64
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-      - uses: Swatinem/rust-cache@v2
-      - name: Install cross-compilation tools
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
-      - name: Build C ABI library
-        run: cargo build --release --target ${{ matrix.target }} -p tesela-cabi
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-      - name: Upload native artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/${{ matrix.artifact }}
-
   python-wheels:
-    needs: build
+    name: Python Wheels
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - target: x86_64-unknown-linux-gnu
-            artifact: libtesela_cabi.so
-            wheel_plat: manylinux_2_17_x86_64.manylinux2014_x86_64
-          - target: aarch64-unknown-linux-gnu
-            artifact: libtesela_cabi.so
-            wheel_plat: manylinux_2_17_aarch64.manylinux2014_aarch64
-          - target: x86_64-apple-darwin
-            artifact: libtesela_cabi.dylib
-            wheel_plat: macosx_11_0_x86_64
-          - target: aarch64-apple-darwin
-            artifact: libtesela_cabi.dylib
-            wheel_plat: macosx_11_0_arm64
-          - target: x86_64-pc-windows-msvc
-            artifact: tesela_cabi.dll
-            wheel_plat: win_amd64
-    runs-on: ubuntu-latest
+          - os: ubuntu-latest
+            python-version: "3.10"
+          - os: ubuntu-latest
+            python-version: "3.11"
+          - os: ubuntu-latest
+            python-version: "3.12"
+          - os: ubuntu-latest
+            python-version: "3.13"
+          - os: macos-latest
+            python-version: "3.12"
+          - os: windows-latest
+            python-version: "3.12"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: Download native library
-        uses: actions/download-artifact@v4
-        with:
-          name: native-${{ matrix.target }}
-          path: sdk/python/tesela/
+          python-version: ${{ matrix.python-version }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Build wheel
         run: |
-          pip install build wheel
           cd sdk/python
-          python -m build --wheel
-      - name: Tag wheel with platform
-        run: |
-          pip install wheel
-          cd sdk/python/dist
-          for whl in *.whl; do
-            python -m wheel tags --remove --platform-tag ${{ matrix.wheel_plat }} "$whl"
-          done
+          python -m pip install --upgrade pip build maturin
+          python -m pip install --no-cache-dir -e .
+          python -m build --wheel --outdir dist
       - name: Upload wheel
         uses: actions/upload-artifact@v4
         with:
-          name: wheel-${{ matrix.target }}
+          name: wheels-${{ matrix.os }}-py${{ matrix.python-version }}
           path: sdk/python/dist/*.whl
 
   release:
-    needs: [build, python-wheels]
+    needs: python-wheels
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
-          pattern: native-*
-          merge-multiple: true
       - uses: actions/download-artifact@v4
         with:
           path: wheels
-          pattern: wheel-*
+          pattern: wheels-*
           merge-multiple: true
       - name: Generate SHA-256 manifest
         run: |
-          cd dist
+          cd wheels
           sha256sum * > manifest.sha256
           cat manifest.sha256
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/*
-            wheels/*
+          files: wheels/*
           generate_release_notes: true

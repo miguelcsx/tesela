@@ -368,9 +368,10 @@ impl Runtime {
             .cloned()
             .ok_or_else(|| Error::not_found("action", action_name))?;
 
-        if action.risk_level.as_deref() == Some("high")
-            && let Some(approval) = self.approval_provider.as_deref()
-        {
+        if action.risk_level.as_deref() == Some("high") {
+            let approval = self.approval_provider.as_deref().ok_or_else(|| {
+                Error::policy_denied("high-risk action requires an approval provider")
+            })?;
             let req = ApprovalRequest {
                 resource: action_name.to_string(),
                 actor: actor.clone(),
@@ -458,5 +459,57 @@ impl Runtime {
         }
 
         Ok(run)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeMap;
+    use tesela_core::{ApiName, Value};
+    use tesela_ir::{ActionHandler, ActionType, Spec};
+
+    use crate::RuntimeOptions;
+
+    fn actor() -> Actor {
+        Actor {
+            user_id: "user_1".to_string(),
+            roles: Vec::new(),
+            claims: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn high_risk_action_requires_approval_provider() {
+        let mut spec = Spec::default();
+        spec.actions.push(ActionType {
+            api_name: ApiName::new_unchecked("publish_change"),
+            display: None,
+            description: None,
+            subject: None,
+            handler: ActionHandler {
+                kind: "callback".to_string(),
+                target: None,
+                config: None,
+            },
+            input_schema: None,
+            output_schema: None,
+            mode: None,
+            risk_level: Some("high".to_string()),
+            idempotency_key: None,
+            deprecated_at: None,
+            metadata: None,
+        });
+
+        let runtime = Runtime::new(spec, RuntimeOptions::dev()).expect("runtime");
+        let error = runtime
+            .execute_action(
+                &actor(),
+                &ApiName::new_unchecked("publish_change"),
+                Value::null(),
+            )
+            .expect_err("high-risk action must be denied");
+
+        assert!(error.to_string().contains("approval provider"));
     }
 }

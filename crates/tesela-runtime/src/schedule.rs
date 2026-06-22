@@ -206,13 +206,13 @@ impl MemoryCronScheduler {
                     }
                 }
             })
-            .expect("failed to spawn cron thread");
+            .ok();
 
         Arc::new(Self {
             jobs,
             counter: Mutex::new(0),
             stop,
-            handle: Mutex::new(Some(handle)),
+            handle: Mutex::new(handle),
             max_jobs: AtomicUsize::new(DEFAULT_MAX_JOBS),
         })
     }

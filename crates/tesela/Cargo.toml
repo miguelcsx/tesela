@@ -22,8 +22,15 @@ tesela-graphql = { workspace = true }
 tesela-mcp = { workspace = true }
 tesela-sdk = { workspace = true, features = ["native-runtime"] }
 tesela-macros = { workspace = true, optional = true }
+tesela-adapter-apxm = { workspace = true, optional = true }
+tesela-adapter-bigquery = { workspace = true, optional = true }
+tesela-adapter-gcs = { workspace = true, optional = true }
 
 [features]
+adapter-apxm = ["dep:tesela-adapter-apxm"]
+adapter-bigquery = ["dep:tesela-adapter-bigquery"]
+adapter-gcs = ["dep:tesela-adapter-gcs"]
+adapters-gcp = ["adapter-bigquery", "adapter-gcs"]
 macros = ["dep:tesela-macros"]
 
 [dev-dependencies]

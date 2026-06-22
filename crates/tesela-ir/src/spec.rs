@@ -115,8 +115,7 @@ impl Spec {
 
     /// Deep clone via serde round-trip.
     pub fn clone_deep(&self) -> Self {
-        let bytes = self.to_json().expect("infallible");
-        Self::parse(&bytes).expect("infallible")
+        self.clone()
     }
 
     /// Compute a SHA-256 hash of the normalized spec JSON.

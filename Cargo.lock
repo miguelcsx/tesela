@@ -2547,6 +2547,9 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "serde_json",
+ "tesela-adapter-apxm",
+ "tesela-adapter-bigquery",
+ "tesela-adapter-gcs",
  "tesela-compiler",
  "tesela-core",
  "tesela-graph",

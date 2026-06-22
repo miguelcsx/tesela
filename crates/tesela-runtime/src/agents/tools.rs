@@ -157,3 +157,140 @@ pub(crate) fn subagent_tools() -> Vec<crate::query::ToolDef> {
         },
     ]
 }
+
+/// Build ontology runtime tool definitions for agents.
+///
+/// These tools are backend-agnostic: callers execute them through their
+/// `Runtime`/backend wiring and keep product-specific authorization outside
+/// this catalog.
+#[must_use]
+pub fn ontology_tools() -> Vec<crate::query::ToolDef> {
+    vec![
+        tool(
+            "tesela.spec",
+            "Return the active Tesela ontology spec with object types, datasources, and properties.",
+            serde_json::json!({"type": "object"}),
+        ),
+        tool(
+            "tesela.search",
+            "Search records for any Tesela object type.",
+            serde_json::json!({
+                "type": "object",
+                "required": ["object_type"],
+                "properties": {
+                    "object_type": {"type": "string"},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 100}
+                }
+            }),
+        ),
+        tool(
+            "tesela.get",
+            "Get one record by object type and id.",
+            serde_json::json!({
+                "type": "object",
+                "required": ["object_type", "id"],
+                "properties": {
+                    "object_type": {"type": "string"},
+                    "id": {"type": "string"}
+                }
+            }),
+        ),
+        tool(
+            "tesela.aggregate",
+            "Count records for any Tesela object type.",
+            serde_json::json!({
+                "type": "object",
+                "required": ["object_type"],
+                "properties": {"object_type": {"type": "string"}}
+            }),
+        ),
+        tool(
+            "tesela.object_set.resolve",
+            "Resolve a named Tesela object set.",
+            serde_json::json!({
+                "type": "object",
+                "required": ["name"],
+                "properties": {"name": {"type": "string"}}
+            }),
+        ),
+        tool(
+            "tesela.object_set.compose",
+            "Compose named Tesela object sets with union, intersect, or subtract.",
+            serde_json::json!({
+                "type": "object",
+                "required": ["names", "op"],
+                "properties": {
+                    "names": {"type": "array", "items": {"type": "string"}},
+                    "op": {"type": "string", "enum": ["union", "intersect", "subtract"]}
+                }
+            }),
+        ),
+        tool(
+            "tesela.links.list",
+            "List declared Tesela links between object types.",
+            serde_json::json!({"type": "object"}),
+        ),
+        tool(
+            "tesela.traverse",
+            "Traverse a declared Tesela link from one source object id.",
+            serde_json::json!({
+                "type": "object",
+                "required": ["link", "source_id"],
+                "properties": {
+                    "link": {"type": "string"},
+                    "source_id": {"type": "string"},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 100}
+                }
+            }),
+        ),
+        tool(
+            "tesela.actions.list",
+            "List declared Tesela actions available in the active ontology without executing them.",
+            serde_json::json!({"type": "object"}),
+        ),
+        tool(
+            "tesela.action.describe",
+            "Describe one declared Tesela action by API name without executing it.",
+            serde_json::json!({
+                "type": "object",
+                "required": ["action"],
+                "properties": {"action": {"type": "string"}}
+            }),
+        ),
+    ]
+}
+
+fn tool(name: &str, description: &str, parameters: serde_json::Value) -> crate::query::ToolDef {
+    crate::query::ToolDef {
+        name: name.to_string(),
+        description: description.to_string(),
+        parameters: Value::new(parameters),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ontology_tools;
+
+    #[test]
+    fn ontology_tools_expose_runtime_primitives() {
+        let tools = ontology_tools();
+        let names = tools
+            .iter()
+            .map(|tool| tool.name.as_str())
+            .collect::<Vec<_>>();
+
+        assert!(names.contains(&"tesela.spec"));
+        assert!(names.contains(&"tesela.search"));
+        assert!(names.contains(&"tesela.get"));
+        assert!(names.contains(&"tesela.traverse"));
+        assert!(names.contains(&"tesela.actions.list"));
+        assert!(tools.iter().all(|tool| {
+            tool.parameters
+                .as_object()
+                .and_then(|schema| schema.get("type"))
+                .and_then(serde_json::Value::as_str)
+                == Some("object")
+        }),);
+    }
+}

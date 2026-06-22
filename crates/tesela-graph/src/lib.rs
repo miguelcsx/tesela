@@ -195,11 +195,18 @@ impl SchemaGraph {
 
         while let Some(current) = queue.pop_front() {
             sorted.push(current);
-            for &neighbor in adj.get(&current).unwrap_or(&Vec::new()) {
-                let deg = in_degree.get_mut(&neighbor).expect("valid node");
-                *deg -= 1;
-                if *deg == 0 {
-                    queue.push_back(neighbor);
+            if let Some(neighbors) = adj.get(&current) {
+                for &neighbor in neighbors {
+                    let Some(deg) = in_degree.get_mut(&neighbor) else {
+                        return Err(Diagnostic::error(
+                            DiagnosticCode::InvalidLink,
+                            "topological sort referenced an unknown node",
+                        ));
+                    };
+                    *deg -= 1;
+                    if *deg == 0 {
+                        queue.push_back(neighbor);
+                    }
                 }
             }
         }

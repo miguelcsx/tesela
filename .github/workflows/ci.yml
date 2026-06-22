@@ -75,17 +75,18 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Python tooling
-        run: python -m pip install --upgrade pip build pytest
-      - name: Build native C ABI library
-        run: cargo build -p tesela-cabi
+        run: python -m pip install --upgrade pip build pytest maturin
+      - name: Build and install PyO3 extension
+        run: |
+          cd sdk/python
+          python -m pip install --no-cache-dir -e . --no-build-isolation
       - name: Run Python tests
         run: |
           cd sdk/python
-          PYTHONPATH=. TESELA_NATIVE_LIB="$GITHUB_WORKSPACE/target/debug/libtesela_cabi.so" python -m pytest tests/ -v
+          python -m pytest tests/ -q
       - name: Build Python distributions
         run: |
           cd sdk/python
-          cp "$GITHUB_WORKSPACE/target/debug/libtesela_cabi.so" tesela/
           python -m build
 
   audit:
