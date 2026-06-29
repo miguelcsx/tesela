@@ -151,9 +151,12 @@ impl Ord for Value {
                 match (a.as_i64(), b.as_i64()) {
                     (Some(ai), Some(bi)) => ai.cmp(&bi),
                     _ => {
-                        let af = a.as_f64().unwrap_or(f64::NAN);
-                        let bf = b.as_f64().unwrap_or(f64::NAN);
-                        af.partial_cmp(&bf).unwrap_or(Ordering::Equal)
+                        let af = number_as_f64(a);
+                        let bf = number_as_f64(b);
+                        match af.partial_cmp(&bf) {
+                            Some(ordering) => ordering,
+                            None => Ordering::Equal,
+                        }
                     }
                 }
             }
@@ -180,6 +183,13 @@ impl Ord for Value {
             }),
         }
     }
+}
+
+fn number_as_f64(value: &serde_json::Number) -> f64 {
+    if let Some(number) = value.as_f64() {
+        return number;
+    }
+    f64::NAN
 }
 
 impl Default for Value {

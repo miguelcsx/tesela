@@ -1,161 +1,234 @@
 //! `#[derive(ObjectType)]` derive macro implementation.
 
 use crate::helpers::{is_option, rust_type_to_data_type, to_snake_case, type_to_string};
-use darling::FromAttributes;
 use proc_macro::TokenStream;
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
-use syn::{DeriveInput, parse_macro_input};
+use syn::spanned::Spanned;
+use syn::{Attribute, DeriveInput, Expr, LitStr, Result, parse_macro_input};
 
-#[derive(Debug, Default, FromAttributes)]
-#[darling(attributes(tesela))]
+#[derive(Debug, Default)]
 struct ObjectTypeArgs {
-    #[darling(default)]
-    datasource: Option<String>,
-    #[darling(default)]
-    primary_key: Option<String>,
-    #[darling(default)]
-    display: Option<String>,
+    api_name: Option<Expr>,
+    datasource: Option<Expr>,
+    primary_key: Option<Expr>,
+    display: Option<LitStr>,
+    description: Option<LitStr>,
 }
 
-#[derive(Debug, Default, FromAttributes)]
-#[darling(attributes(tesela))]
+#[derive(Debug, Default)]
 struct FieldArgs {
-    #[darling(default)]
-    indexed: darling::util::Flag,
-    #[darling(default)]
-    unique: darling::util::Flag,
-    #[darling(default)]
-    nullable: darling::util::Flag,
-    #[darling(default)]
-    description: Option<String>,
-    #[darling(default)]
-    source_column: Option<String>,
-    #[darling(default)]
-    encrypted: darling::util::Flag,
+    indexed: bool,
+    unique: bool,
+    nullable: bool,
+    data_type: Option<Expr>,
+    description: Option<LitStr>,
+    source_column: Option<LitStr>,
+    encrypted: bool,
 }
 
 pub(crate) fn expand(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
+    match expand_checked(input) {
+        Ok(tokens) => tokens.into(),
+        Err(error) => error.to_compile_error().into(),
+    }
+}
+
+fn expand_checked(input: DeriveInput) -> Result<TokenStream2> {
     let struct_name = &input.ident;
     let struct_name_str = struct_name.to_string();
-    let api_name_str = to_snake_case(&struct_name_str);
+    let fallback_api_name = to_snake_case(&struct_name_str);
+    let object_args = parse_object_args(&input.attrs)?;
 
-    let macro_args = ObjectTypeArgs::from_attributes(&input.attrs).unwrap_or_default();
+    let datasource = required_expr(
+        object_args.datasource,
+        struct_name.span(),
+        "ObjectType requires #[tesela(datasource = ...)]",
+    )?;
+    let primary_key = required_expr(
+        object_args.primary_key,
+        struct_name.span(),
+        "ObjectType requires #[tesela(primary_key = ...)]",
+    )?;
+    let api_name = api_name_tokens(object_args.api_name, &fallback_api_name);
+    let datasource = api_name_tokens(Some(datasource), "");
+    let primary_key = api_name_tokens(Some(primary_key), "");
+    let display = option_lit_tokens(object_args.display);
+    let description = option_lit_tokens(object_args.description);
 
-    let datasource = macro_args
-        .datasource
-        .as_deref()
-        .unwrap_or("memory")
-        .to_string();
-    let primary_key = macro_args
-        .primary_key
-        .as_deref()
-        .unwrap_or("id")
-        .to_string();
-    let display_name = macro_args.display.unwrap_or(struct_name_str);
+    let fields = named_fields(&input)?;
+    let mut property_builders = Vec::with_capacity(fields.len());
 
-    let fields = match &input.data {
-        syn::Data::Struct(ds) => match &ds.fields {
-            syn::Fields::Named(named) => named.named.iter().collect::<Vec<_>>(),
-            _ => {
-                return syn::Error::new(
-                    Span::call_site(),
-                    "ObjectType requires a struct with named fields",
-                )
-                .to_compile_error()
-                .into();
+    for field in fields {
+        let field_name = match &field.ident {
+            Some(ident) => ident.to_string(),
+            None => {
+                return Err(syn::Error::new(
+                    field.span(),
+                    "ObjectType requires named fields",
+                ));
             }
-        },
-        _ => {
-            return syn::Error::new(
-                Span::call_site(),
-                "ObjectType can only be applied to structs",
-            )
-            .to_compile_error()
-            .into();
-        }
-    };
-
-    let mut property_builders = Vec::new();
-
-    for field in &fields {
-        let field_name = field
-            .ident
-            .as_ref()
-            .expect("named struct field")
-            .to_string();
-        let ty_str = type_to_string(&field.ty);
-        let is_opt = is_option(&ty_str);
-        let data_type = rust_type_to_data_type(&ty_str);
-
-        let field_args = FieldArgs::from_attributes(&field.attrs).unwrap_or_default();
-
-        let field_indexed = field_args.indexed.is_present();
-        let field_unique = field_args.unique.is_present();
-        let field_encrypted = field_args.encrypted.is_present();
-        let field_description = field_args.description.unwrap_or_default();
-        let field_source_column = field_args.source_column.unwrap_or_default();
-
-        // nullable: explicit flag > Option<T> inference
-        let field_nullable = if field_args.nullable.is_present() {
-            true
-        } else {
-            is_opt
         };
+        let ty_str = type_to_string(&field.ty);
+        let field_args = parse_field_args(&field.attrs)?;
+        let data_type = match &field_args.data_type {
+            Some(data_type) => quote!(#data_type),
+            None => rust_type_to_data_type(&ty_str),
+        };
+        let field_nullable = field_args.nullable || is_option(&ty_str);
+        let field_description = option_lit_tokens(field_args.description);
+        let field_source_column = option_lit_tokens(field_args.source_column);
+        let field_indexed = field_args.indexed;
+        let field_unique = field_args.unique;
+        let field_encrypted = field_args.encrypted;
 
         property_builders.push(quote! {
-            ::tesela_ir::Property {
-                api_name: ::tesela_core::ApiName::new_unchecked(#field_name),
+            ::tesela::ir::StaticProperty {
+                api_name: #field_name,
                 display: None,
-                description: if #field_description.is_empty() { None } else { Some(#field_description.to_string()) },
+                description: #field_description,
                 data_type: #data_type,
-                nullable: if #field_nullable { Some(true) } else { None },
-                unique: if #field_unique { Some(true) } else { None },
-                indexed: if #field_indexed { Some(true) } else { None },
-                default: None,
-                computed: None,
-                source_column: if #field_source_column.is_empty() { None } else { Some(#field_source_column.to_string()) },
-                allowed_values: None,
-                sort_order: None,
-                tags: Vec::new(),
-                markings: Vec::new(),
-                encrypted: if #field_encrypted { Some(true) } else { None },
-                quality: Vec::new(),
-                metadata: None,
+                nullable: #field_nullable,
+                indexed: #field_indexed,
+                unique: #field_unique,
+                source_column: #field_source_column,
+                encrypted: #field_encrypted,
             }
         });
     }
 
-    let expanded = quote! {
-        impl #struct_name {
-            /// Return the Tesela `ObjectType` definition for this struct.
-            pub fn tesela_object_type() -> ::tesela_ir::ObjectType {
-                ::tesela_ir::ObjectType {
-                    api_name: ::tesela_core::ApiName::new_unchecked(#api_name_str),
-                    display: Some(#display_name.to_string()),
-                    description: None,
-                    source: ::tesela_ir::ObjectSource {
-                        datasource: ::tesela_core::ApiName::new_unchecked(#datasource),
-                        resource: Some(#api_name_str.to_string()),
-                    },
-                    primary_key: ::tesela_core::ApiName::new_unchecked(#primary_key),
-                    properties: vec![ #(#property_builders),* ],
-                    traits: Vec::new(),
-                    tags: Vec::new(),
-                    metadata: None,
-                    indexes: Vec::new(),
-                    temporal: None,
-                    lifecycle: None,
-                    scoring: None,
-                    classification: None,
-                    quality_rules: Vec::new(),
-                    lineage: Vec::new(),
-                    deprecated_at: None,
+    Ok(quote! {
+        impl ::tesela::ir::ObjectTypeDefinition for #struct_name {
+            fn definition() -> ::tesela::ir::StaticObjectType {
+                const PROPERTIES: &[::tesela::ir::StaticProperty] = &[#(#property_builders),*];
+
+                ::tesela::ir::StaticObjectType {
+                    api_name: #api_name,
+                    display: #display,
+                    description: #description,
+                    datasource: #datasource,
+                    resource: Some(#api_name),
+                    primary_key: #primary_key,
+                    properties: PROPERTIES,
+                    traits: &[],
+                    tags: &[],
+                    indexes: &[],
                 }
             }
         }
-    };
 
-    TokenStream::from(expanded)
+        impl #struct_name {
+            /// Return the Tesela `ObjectType` definition for this struct.
+            pub fn tesela_object_type() -> ::tesela::ir::ObjectType {
+                <Self as ::tesela::ir::ObjectTypeDefinition>::object_type()
+            }
+        }
+    })
+}
+
+fn named_fields(input: &DeriveInput) -> Result<Vec<&syn::Field>> {
+    match &input.data {
+        syn::Data::Struct(ds) => match &ds.fields {
+            syn::Fields::Named(named) => Ok(named.named.iter().collect()),
+            _ => Err(syn::Error::new(
+                Span::call_site(),
+                "ObjectType requires a struct with named fields",
+            )),
+        },
+        _ => Err(syn::Error::new(
+            Span::call_site(),
+            "ObjectType can only be applied to structs",
+        )),
+    }
+}
+
+fn parse_object_args(attrs: &[Attribute]) -> Result<ObjectTypeArgs> {
+    let mut args = ObjectTypeArgs::default();
+    for attr in tesela_attrs(attrs) {
+        attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("name") {
+                args.api_name = Some(meta.value()?.parse()?);
+                return Ok(());
+            }
+            if meta.path.is_ident("datasource") {
+                args.datasource = Some(meta.value()?.parse()?);
+                return Ok(());
+            }
+            if meta.path.is_ident("primary_key") {
+                args.primary_key = Some(meta.value()?.parse()?);
+                return Ok(());
+            }
+            if meta.path.is_ident("display") {
+                args.display = Some(meta.value()?.parse()?);
+                return Ok(());
+            }
+            if meta.path.is_ident("description") {
+                args.description = Some(meta.value()?.parse()?);
+                return Ok(());
+            }
+            Err(meta.error("unsupported ObjectType #[tesela(...)] attribute"))
+        })?;
+    }
+    Ok(args)
+}
+
+fn parse_field_args(attrs: &[Attribute]) -> Result<FieldArgs> {
+    let mut args = FieldArgs::default();
+    for attr in tesela_attrs(attrs) {
+        attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("indexed") {
+                args.indexed = true;
+                return Ok(());
+            }
+            if meta.path.is_ident("unique") {
+                args.unique = true;
+                return Ok(());
+            }
+            if meta.path.is_ident("nullable") {
+                args.nullable = true;
+                return Ok(());
+            }
+            if meta.path.is_ident("encrypted") {
+                args.encrypted = true;
+                return Ok(());
+            }
+            if meta.path.is_ident("data_type") {
+                args.data_type = Some(meta.value()?.parse()?);
+                return Ok(());
+            }
+            if meta.path.is_ident("description") {
+                args.description = Some(meta.value()?.parse()?);
+                return Ok(());
+            }
+            if meta.path.is_ident("source_column") {
+                args.source_column = Some(meta.value()?.parse()?);
+                return Ok(());
+            }
+            Err(meta.error("unsupported field #[tesela(...)] attribute"))
+        })?;
+    }
+    Ok(args)
+}
+
+fn tesela_attrs(attrs: &[Attribute]) -> impl Iterator<Item = &Attribute> {
+    attrs.iter().filter(|attr| attr.path().is_ident("tesela"))
+}
+
+fn required_expr(value: Option<Expr>, span: Span, message: &'static str) -> Result<Expr> {
+    value.ok_or_else(|| syn::Error::new(span, message))
+}
+
+fn api_name_tokens(value: Option<Expr>, fallback: &str) -> TokenStream2 {
+    match value {
+        Some(expr) => quote!(::tesela::core::ApiNameSource::api_name(&(#expr))),
+        None => quote!(#fallback),
+    }
+}
+
+fn option_lit_tokens(value: Option<LitStr>) -> TokenStream2 {
+    match value {
+        Some(value) => quote!(Some(#value)),
+        None => quote!(None),
+    }
 }

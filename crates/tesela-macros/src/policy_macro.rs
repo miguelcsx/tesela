@@ -37,7 +37,7 @@ pub(crate) fn expand(args: TokenStream, input: TokenStream) -> TokenStream {
     let fn_name = &input_fn.sig.ident;
     let fn_name_str = fn_name.to_string();
 
-    let effect_str = macro_args.effect.as_deref().unwrap_or("allow");
+    let effect_str = macro_args.effect.as_deref().map_or("allow", |value| value);
     let effect_tokens = match effect_str {
         "deny" => quote!(::tesela_core::PolicyEffect::Deny),
         _ => quote!(::tesela_core::PolicyEffect::Allow),

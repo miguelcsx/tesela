@@ -14,11 +14,34 @@ use std::sync::Arc;
 ///
 /// ```
 /// use tesela_core::ApiName;
-/// let name: ApiName = "customer_order".parse().unwrap();
+/// let name = ApiName::new("customer_order")?;
 /// assert_eq!(name.as_ref(), "customer_order");
+/// # Ok::<(), tesela_core::Error>(())
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ApiName(Arc<str>);
+
+/// A typed source for stable Tesela API names.
+///
+/// Platform code should implement this trait for enums that name datasources,
+/// object types, fields, tools, and other durable contracts. This keeps string
+/// literals at the boundary of the enum implementation instead of spreading
+/// magic strings across ontology definitions.
+pub trait ApiNameSource {
+    /// Return the stable API name.
+    fn api_name(&self) -> &'static str;
+
+    /// Convert the stable API name into a validated Tesela identifier.
+    fn to_api_name(&self) -> ApiName {
+        ApiName::from(self.api_name())
+    }
+}
+
+impl ApiNameSource for &'static str {
+    fn api_name(&self) -> &'static str {
+        self
+    }
+}
 
 impl ApiName {
     /// Regex pattern for valid API names.
@@ -36,8 +59,9 @@ impl ApiName {
         // For simplicity in a core crate we compile once per call; in practice
         // the caller should cache or use `lazy_regex`.
         static RE: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
-        let re = RE.get_or_init(|| {
-            Regex::new(ApiName::PATTERN).expect("BUG: ApiName::PATTERN is a compile-time constant")
+        let re = RE.get_or_init(|| match Regex::new(ApiName::PATTERN) {
+            Ok(regex) => regex,
+            Err(error) => panic!("invalid ApiName pattern: {error}"),
         });
         if !re.is_match(s) {
             return Err(crate::Error::validation(format!(
@@ -84,6 +108,23 @@ impl FromStr for ApiName {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Self::new(s)
+    }
+}
+
+/// Create an `ApiName` from a `&'static str` without runtime validation.
+///
+/// Use for string literals known at compile time to be valid API names.
+/// Analogous to `http::Method::from_static`. Panics in debug builds if the
+/// string is not a valid API name, so mistakes surface in tests rather than
+/// production.
+impl From<&'static str> for ApiName {
+    fn from(s: &'static str) -> Self {
+        debug_assert!(
+            Self::new(s).is_ok(),
+            "'{s}' is not a valid ApiName (must match {})",
+            Self::PATTERN
+        );
+        Self::new_unchecked(s)
     }
 }
 

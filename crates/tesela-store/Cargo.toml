@@ -1,22 +1,16 @@
 [package]
-name = "tesela-runtime"
+name = "tesela-store"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
-publish = false
 repository.workspace = true
-description = "Runtime engine for Tesela: ports, policy, auth, audit, events, actions, agents."
+description = "Store contracts and in-memory store for Tesela ontology runtimes."
+publish = false
 
 [dependencies]
 tesela-core = { workspace = true }
 tesela-ir = { workspace = true }
-tesela-store = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-schemars = { workspace = true }
-chrono = { workspace = true }
 uuid = { workspace = true }
-tracing = { workspace = true }
-
-[dev-dependencies]

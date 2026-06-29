@@ -1,439 +1,486 @@
-//! Main Tesela runtime engine.
+//! Main ontology runtime.
 
-use crate::config::ConfigSource;
-use crate::crypto::Sealer;
-use crate::ports::*;
-use crate::query::Actor;
-use crate::ratelimit::RateLimiter;
-use crate::runtime_internal::{DefaultIdGenerator, SystemClock};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use tesela_core::{ApiName, Error, lock_read};
-use tesela_ir::{ObjectSet, Spec, TransformPipeline};
 
-// ---------------------------------------------------------------------------
-// RuntimeOptions
-// ---------------------------------------------------------------------------
+use tesela_core::{ApiName, Error, Operation, Value, lock_read, lock_write};
+use tesela_ir::{AggregateResult, MutationResult, ObjectSet, Page, Record, Spec};
+use tesela_store::{
+    Actor, AggregateQuery, AuditEvent, AuditSink, EventBus, Mutation, OntologyEvent, OntologyStore,
+    PolicyDecision, PolicyEngine, PolicyRequest, Query, StaticStoreRouter, StoreRouter,
+    TraversalQuery,
+};
+
+use crate::AllowAllPolicy;
 
 /// Options used to construct a [`Runtime`].
 #[derive(Default)]
 pub struct RuntimeOptions {
-    /// Allow development/test-only defaults for missing policy and audit ports.
-    ///
-    /// Production runtimes should leave this false and wire explicit policy and
-    /// audit implementations. This flag exists so examples and unit tests can
-    /// opt into local-only behavior without hiding missing governance wiring.
-    pub allow_dev_defaults: bool,
-    /// Backend registry.
-    pub backend_registry: Option<Arc<dyn BackendRegistry>>,
-    /// Policy evaluator.
-    pub policy_evaluator: Option<Arc<dyn PolicyEvaluator>>,
-    /// Audit sink.
+    /// Store router.
+    pub store_router: Option<Arc<dyn StoreRouter>>,
+    /// Policy engine.
+    pub policy_engine: Option<Arc<dyn PolicyEngine>>,
+    /// Optional audit sink.
     pub audit_sink: Option<Arc<dyn AuditSink>>,
-    /// Event bus.
+    /// Optional event bus.
     pub event_bus: Option<Arc<dyn EventBus>>,
-    /// Action dispatcher.
-    pub action_dispatcher: Option<Arc<dyn ActionDispatcher>>,
-    /// Agent runtime.
-    pub agent_runtime: Option<Arc<dyn AgentRuntime>>,
-    /// ID generator.
-    pub id_generator: Option<Arc<dyn IdGenerator>>,
-    /// Clock.
-    pub clock: Option<Arc<dyn Clock>>,
-    /// Object store for signed upload URLs.
-    pub object_store: Option<Arc<dyn ObjectStore>>,
-    /// Meta store for persisting spec versions.
-    pub meta_store: Option<Arc<dyn MetaStore>>,
-    /// Maximum rows a single search may return.
+    /// Maximum rows a search may return.
     pub max_query_limit: Option<i32>,
-    /// Approval provider for high-risk or flagged actions.
-    pub approval_provider: Option<Arc<dyn ApprovalProvider>>,
-    /// CDC / streaming source.
-    pub change_stream_source: Option<Arc<dyn ChangeStreamSource>>,
-    /// Agent evaluator called after every completed agent run.
-    pub agent_evaluator: Option<Arc<dyn AgentEvaluator>>,
-    /// Obligation executor for policy side-effects.
-    pub obligation_executor: Option<Arc<dyn ObligationExecutor>>,
-    /// Evaluator for computed property expressions.
-    pub computed_evaluator: Option<Arc<dyn ComputedEvaluator>>,
-    /// Validator for quality rules declared on object types.
-    pub quality_rule_evaluator: Option<Arc<dyn QualityRuleEvaluator>>,
-    /// ANN vector search backend.
-    pub vector_backend: Option<Arc<dyn VectorBackend>>,
-    /// Runtime data-lineage store.
-    pub lineage_store: Option<Arc<dyn LineageStore>>,
-    /// Schema migration executor.
-    pub migration_executor: Option<Arc<dyn MigrationExecutor>>,
-    /// Branch / draft-spec store.
-    pub branch_store: Option<Arc<dyn BranchStore>>,
-    /// Query planner for aggregate push-down.
-    pub query_planner: Option<Arc<dyn QueryPlanner>>,
-    /// Message bus for logical events.
-    pub message_bus: Option<Arc<dyn MessageBus>>,
-    /// Run store for actions, jobs, and uploads.
-    pub run_store: Option<Arc<dyn RunStore>>,
-    /// Capability issuer/verifier.
-    pub capability_issuer: Option<Arc<dyn CapabilityIssuer>>,
-    /// Federated search backend.
-    pub federated_backend: Option<Arc<dyn FederatedBackend>>,
-    /// Transform pipeline executor.
-    pub pipeline_executor: Option<Arc<dyn PipelineExecutor>>,
-    /// Subscription bus for real-time push / SSE.
-    pub subscription_bus: Option<Arc<dyn SubscriptionBus>>,
-    /// Per-actor rate limiter (checked at the top of every operation).
-    pub rate_limiter: Option<Arc<dyn RateLimiter>>,
-    /// Symmetric encryption sealer for field-level encryption.
-    pub sealer: Option<Arc<dyn Sealer>>,
-    /// Runtime configuration source.
-    pub config_source: Option<Arc<dyn ConfigSource>>,
-    /// Metrics registry for counters, histograms, gauges.
-    pub metrics_registry: Option<Arc<dyn tesela_telemetry::MetricsRegistry>>,
 }
 
 impl RuntimeOptions {
-    /// Build options for tests and examples that intentionally run without
-    /// production policy/audit infrastructure.
+    /// Local development/test options.
     pub fn dev() -> Self {
         Self {
-            allow_dev_defaults: true,
+            policy_engine: Some(Arc::new(AllowAllPolicy)),
             ..Self::default()
         }
     }
 }
 
-// ---------------------------------------------------------------------------
-// Runtime
-// ---------------------------------------------------------------------------
-
-/// Immutable snapshot of all ontology indexes, swapped atomically on `apply_spec`.
-pub(crate) struct OntologySnapshot {
-    pub spec: Arc<Spec>,
-    pub object_types: HashMap<ApiName, Arc<tesela_ir::ObjectType>>,
-    pub datasources: HashMap<ApiName, Arc<tesela_ir::Datasource>>,
-    pub actions: HashMap<ApiName, Arc<tesela_ir::ActionType>>,
-    pub agents: HashMap<ApiName, Arc<tesela_ir::Agent>>,
-    pub policies: HashMap<ApiName, Arc<tesela_ir::PolicyRule>>,
-    pub links: HashMap<ApiName, Arc<tesela_ir::LinkType>>,
-    pub roles: HashMap<ApiName, Arc<tesela_ir::Role>>,
-    pub object_sets: HashMap<ApiName, Arc<ObjectSet>>,
-    pub pipelines: HashMap<ApiName, Arc<TransformPipeline>>,
-    pub artifact_types: HashMap<ApiName, Arc<tesela_ir::ArtifactType>>,
-    pub upload_flows: HashMap<ApiName, Arc<tesela_ir::UploadFlow>>,
-    pub job_types: HashMap<ApiName, Arc<tesela_ir::JobType>>,
-    pub event_types: HashMap<ApiName, Arc<tesela_ir::EventType>>,
-    pub capability_grants: HashMap<ApiName, Arc<tesela_ir::CapabilityGrant>>,
-    pub aggregate_views: HashMap<ApiName, Arc<tesela_ir::AggregateView>>,
+/// Immutable ontology indexes.
+struct OntologySnapshot {
+    spec: Arc<Spec>,
+    object_types: HashMap<ApiName, Arc<tesela_ir::ObjectType>>,
+    links: HashMap<ApiName, Arc<tesela_ir::LinkType>>,
+    object_sets: HashMap<ApiName, Arc<ObjectSet>>,
 }
 
 impl OntologySnapshot {
-    pub(crate) fn build(spec: Spec) -> Self {
+    fn build(spec: Spec) -> Self {
         Self {
-            object_types: Runtime::index_object_types(&spec),
-            datasources: Runtime::index_datasources(&spec),
-            actions: Runtime::index_actions(&spec),
-            agents: Runtime::index_agents(&spec),
-            policies: Runtime::index_policies(&spec),
-            links: Runtime::index_links(&spec),
-            roles: Runtime::index_roles(&spec),
-            object_sets: Runtime::index_object_sets(&spec),
-            pipelines: Runtime::index_pipelines(&spec),
-            artifact_types: Runtime::index_artifact_types(&spec),
-            upload_flows: Runtime::index_upload_flows(&spec),
-            job_types: Runtime::index_job_types(&spec),
-            event_types: Runtime::index_event_types(&spec),
-            capability_grants: Runtime::index_capability_grants(&spec),
-            aggregate_views: Runtime::index_aggregate_views(&spec),
+            object_types: spec
+                .object_types
+                .iter()
+                .map(|item| (item.api_name.clone(), Arc::new(item.clone())))
+                .collect(),
+            links: spec
+                .link_types
+                .iter()
+                .map(|item| (item.api_name.clone(), Arc::new(item.clone())))
+                .collect(),
+            object_sets: spec
+                .object_sets
+                .iter()
+                .map(|item| (item.api_name.clone(), Arc::new(item.clone())))
+                .collect(),
             spec: Arc::new(spec),
         }
     }
 }
 
-/// The main Tesela runtime.
-///
-/// All ontology indexes live behind a single `RwLock<Arc<OntologySnapshot>>`
-/// so that `apply_spec` swaps every index atomically. Per-request reads clone
-/// the `Arc` (8 bytes) then access the snapshot without contention.
-pub struct Runtime {
-    pub(crate) ontology: RwLock<Arc<OntologySnapshot>>,
+/// Shareable ontology handle for transports and agent harnesses.
+#[derive(Clone)]
+pub struct OntologyHandle {
+    runtime: Arc<Runtime>,
+}
 
-    pub(crate) backend_registry: Option<Arc<dyn BackendRegistry>>,
-    pub(crate) policy_evaluator: Option<Arc<dyn PolicyEvaluator>>,
-    pub(crate) audit_sink: Arc<dyn AuditSink>,
-    pub(crate) event_bus: Arc<dyn EventBus>,
-    pub(crate) action_dispatcher: Option<Arc<dyn ActionDispatcher>>,
-    pub(crate) agent_runtime: Option<Arc<dyn AgentRuntime>>,
-    pub(crate) id_generator: Arc<dyn IdGenerator>,
-    pub(crate) clock: Arc<dyn Clock>,
-    pub(crate) object_store: Option<Arc<dyn ObjectStore>>,
-    pub(crate) meta_store: Option<Arc<dyn MetaStore>>,
-    pub(crate) max_query_limit: i32,
-    pub(crate) approval_provider: Option<Arc<dyn ApprovalProvider>>,
-    pub(crate) change_stream_source: Option<Arc<dyn ChangeStreamSource>>,
-    pub(crate) agent_evaluator: Option<Arc<dyn AgentEvaluator>>,
-    pub(crate) obligation_executor: Option<Arc<dyn ObligationExecutor>>,
-    pub(crate) computed_evaluator: Option<Arc<dyn ComputedEvaluator>>,
-    pub(crate) quality_rule_evaluator: Option<Arc<dyn QualityRuleEvaluator>>,
-    pub(crate) vector_backend: Option<Arc<dyn VectorBackend>>,
-    pub(crate) lineage_store: Option<Arc<dyn LineageStore>>,
-    pub(crate) migration_executor: Option<Arc<dyn MigrationExecutor>>,
-    pub(crate) branch_store: Option<Arc<dyn BranchStore>>,
-    pub(crate) query_planner: Option<Arc<dyn QueryPlanner>>,
-    pub(crate) message_bus: Option<Arc<dyn MessageBus>>,
-    pub(crate) run_store: Option<Arc<dyn RunStore>>,
-    pub(crate) capability_issuer: Option<Arc<dyn CapabilityIssuer>>,
-    pub(crate) federated_backend: Option<Arc<dyn FederatedBackend>>,
-    pub(crate) pipeline_executor: Option<Arc<dyn PipelineExecutor>>,
-    pub(crate) subscription_bus: Option<Arc<dyn SubscriptionBus>>,
-    pub(crate) rate_limiter: Option<Arc<dyn RateLimiter>>,
-    pub(crate) sealer: Option<Arc<dyn Sealer>>,
-    pub(crate) config_source: Option<Arc<dyn ConfigSource>>,
-    pub(crate) metrics_registry: Option<Arc<dyn tesela_telemetry::MetricsRegistry>>,
+impl OntologyHandle {
+    /// Wrap a runtime.
+    pub fn new(runtime: Arc<Runtime>) -> Self {
+        Self { runtime }
+    }
+
+    /// Borrow the underlying runtime.
+    pub fn runtime(&self) -> &Arc<Runtime> {
+        &self.runtime
+    }
+}
+
+/// Tesela ontology runtime.
+pub struct Runtime {
+    ontology: RwLock<Arc<OntologySnapshot>>,
+    store_router: Arc<dyn StoreRouter>,
+    policy_engine: Arc<dyn PolicyEngine>,
+    audit_sink: Option<Arc<dyn AuditSink>>,
+    event_bus: Option<Arc<dyn EventBus>>,
+    max_query_limit: i32,
 }
 
 impl Runtime {
-    /// Create a new runtime from a compiled spec and options.
-    pub fn new(spec: Spec, opts: RuntimeOptions) -> Result<Arc<Self>, Error> {
-        if opts.allow_dev_defaults {
-            tracing::warn!(
-                "Runtime created with allow_dev_defaults=true; \
-                 policy and audit are disabled — do not use in production"
-            );
-        }
-
-        if opts.audit_sink.is_none() && !opts.allow_dev_defaults {
-            return Err(Error::validation(
-                "audit_sink is required; use RuntimeOptions::dev() only for local tests/examples",
-            ));
-        }
-        if opts.policy_evaluator.is_none() && !opts.allow_dev_defaults {
-            return Err(Error::validation(
-                "policy_evaluator is required; use RuntimeOptions::dev() only for local tests/examples",
-            ));
-        }
-
-        let snapshot = OntologySnapshot::build(spec);
-
-        let rt = Arc::new(Self {
-            ontology: RwLock::new(Arc::new(snapshot)),
-            backend_registry: opts.backend_registry,
-            policy_evaluator: opts.policy_evaluator,
-            audit_sink: opts
-                .audit_sink
-                .unwrap_or_else(|| Arc::new(crate::audit::NoopAuditSink)),
-            event_bus: opts
-                .event_bus
-                .unwrap_or_else(|| Arc::new(crate::events::NoopEventBus)),
-            action_dispatcher: opts.action_dispatcher,
-            agent_runtime: opts.agent_runtime,
-            id_generator: opts
-                .id_generator
-                .unwrap_or_else(|| Arc::new(DefaultIdGenerator)),
-            clock: opts.clock.unwrap_or_else(|| Arc::new(SystemClock)),
-            object_store: opts.object_store,
-            meta_store: opts.meta_store,
-            max_query_limit: opts.max_query_limit.unwrap_or(1000),
-            approval_provider: opts.approval_provider,
-            change_stream_source: opts.change_stream_source,
-            agent_evaluator: opts.agent_evaluator,
-            obligation_executor: opts.obligation_executor,
-            computed_evaluator: opts.computed_evaluator,
-            quality_rule_evaluator: opts.quality_rule_evaluator,
-            vector_backend: opts.vector_backend,
-            lineage_store: opts.lineage_store,
-            migration_executor: opts.migration_executor,
-            branch_store: opts.branch_store,
-            query_planner: opts.query_planner,
-            message_bus: opts.message_bus,
-            run_store: opts.run_store,
-            capability_issuer: opts.capability_issuer,
-            federated_backend: opts.federated_backend,
-            pipeline_executor: opts.pipeline_executor,
-            subscription_bus: opts.subscription_bus,
-            rate_limiter: opts.rate_limiter,
-            sealer: opts.sealer,
-            config_source: opts.config_source,
-            metrics_registry: opts.metrics_registry,
-        });
-        Ok(rt)
+    /// Create a runtime from a spec and platform-provided ports.
+    pub fn new(spec: Spec, options: RuntimeOptions) -> Result<Arc<Self>, Error> {
+        let store_router = match options.store_router {
+            Some(router) => router,
+            None => Arc::new(StaticStoreRouter::new()),
+        };
+        let policy_engine = options
+            .policy_engine
+            .ok_or_else(|| Error::validation("policy_engine is required"))?;
+        Ok(Arc::new(Self {
+            ontology: RwLock::new(Arc::new(OntologySnapshot::build(spec))),
+            store_router,
+            policy_engine,
+            audit_sink: options.audit_sink,
+            event_bus: options.event_bus,
+            max_query_limit: max_query_limit(options.max_query_limit),
+        }))
     }
 
-    // -----------------------------------------------------------------------
-    // Ontology snapshot accessor
-    // -----------------------------------------------------------------------
-
-    /// Cheaply clone the current ontology snapshot (`Arc` bump only).
-    pub(crate) fn ontology(&self) -> Result<Arc<OntologySnapshot>, Error> {
-        Ok(Arc::clone(&*lock_read(&self.ontology)?))
+    /// Return a clone of the active spec.
+    pub fn spec(&self) -> Result<Spec, Error> {
+        Ok(lock_read(&self.ontology)?.spec.as_ref().clone())
     }
 
-    // -----------------------------------------------------------------------
-    // Index builders
-    // -----------------------------------------------------------------------
-
-    pub(crate) fn index_object_types(spec: &Spec) -> HashMap<ApiName, Arc<tesela_ir::ObjectType>> {
-        spec.object_types
-            .iter()
-            .map(|ot| (ot.api_name.clone(), Arc::new(ot.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_datasources(spec: &Spec) -> HashMap<ApiName, Arc<tesela_ir::Datasource>> {
-        spec.datasources
-            .iter()
-            .map(|ds| (ds.api_name.clone(), Arc::new(ds.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_actions(spec: &Spec) -> HashMap<ApiName, Arc<tesela_ir::ActionType>> {
-        spec.actions
-            .iter()
-            .map(|a| (a.api_name.clone(), Arc::new(a.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_agents(spec: &Spec) -> HashMap<ApiName, Arc<tesela_ir::Agent>> {
-        spec.agents
-            .iter()
-            .map(|a| (a.api_name.clone(), Arc::new(a.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_policies(spec: &Spec) -> HashMap<ApiName, Arc<tesela_ir::PolicyRule>> {
-        spec.policies
-            .iter()
-            .map(|p| (p.api_name.clone(), Arc::new(p.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_links(spec: &Spec) -> HashMap<ApiName, Arc<tesela_ir::LinkType>> {
-        spec.link_types
-            .iter()
-            .map(|l| (l.api_name.clone(), Arc::new(l.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_roles(spec: &Spec) -> HashMap<ApiName, Arc<tesela_ir::Role>> {
-        spec.roles
-            .iter()
-            .map(|r| (r.api_name.clone(), Arc::new(r.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_object_sets(spec: &Spec) -> HashMap<ApiName, Arc<ObjectSet>> {
-        spec.object_sets
-            .iter()
-            .map(|os| (os.api_name.clone(), Arc::new(os.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_pipelines(spec: &Spec) -> HashMap<ApiName, Arc<TransformPipeline>> {
-        spec.pipelines
-            .iter()
-            .map(|p| (p.api_name.clone(), Arc::new(p.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_artifact_types(
-        spec: &Spec,
-    ) -> HashMap<ApiName, Arc<tesela_ir::ArtifactType>> {
-        spec.artifact_types
-            .iter()
-            .map(|a| (a.api_name.clone(), Arc::new(a.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_upload_flows(spec: &Spec) -> HashMap<ApiName, Arc<tesela_ir::UploadFlow>> {
-        spec.upload_flows
-            .iter()
-            .map(|u| (u.api_name.clone(), Arc::new(u.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_job_types(spec: &Spec) -> HashMap<ApiName, Arc<tesela_ir::JobType>> {
-        spec.job_types
-            .iter()
-            .map(|j| (j.api_name.clone(), Arc::new(j.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_event_types(spec: &Spec) -> HashMap<ApiName, Arc<tesela_ir::EventType>> {
-        spec.event_types
-            .iter()
-            .map(|e| (e.api_name.clone(), Arc::new(e.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_capability_grants(
-        spec: &Spec,
-    ) -> HashMap<ApiName, Arc<tesela_ir::CapabilityGrant>> {
-        spec.capability_grants
-            .iter()
-            .map(|c| (c.api_name.clone(), Arc::new(c.clone())))
-            .collect()
-    }
-
-    pub(crate) fn index_aggregate_views(
-        spec: &Spec,
-    ) -> HashMap<ApiName, Arc<tesela_ir::AggregateView>> {
-        spec.aggregate_views
-            .iter()
-            .map(|a| (a.api_name.clone(), Arc::new(a.clone())))
-            .collect()
-    }
-
-    // -----------------------------------------------------------------------
-    // Rate-limit enforcement
-    // -----------------------------------------------------------------------
-
-    pub(crate) fn check_rate_limit(&self, actor: &Actor, namespace: &str) -> Result<(), Error> {
-        if let Some(rl) = &self.rate_limiter
-            && !rl.allow(namespace, &actor.user_id)?
-        {
-            return Err(crate::ratelimit::rate_limited_error(
-                namespace,
-                &actor.user_id,
-            ));
-        }
+    /// Atomically replace the active spec.
+    pub fn apply_spec(&self, spec: Spec) -> Result<(), Error> {
+        *lock_write(&self.ontology)? = Arc::new(OntologySnapshot::build(spec));
         Ok(())
     }
 
-    // -----------------------------------------------------------------------
-    // Config accessor
-    // -----------------------------------------------------------------------
-
-    /// Access the runtime configuration source.
-    pub fn config(&self) -> Option<&dyn ConfigSource> {
-        self.config_source.as_deref()
-    }
-
-    /// Access the sealer for field-level encryption / decryption.
-    pub fn sealer(&self) -> Option<&dyn Sealer> {
-        self.sealer.as_deref()
-    }
-
-    /// Get a counter from the metrics registry (or a no-op counter if none configured).
-    pub(crate) fn metric_counter(
+    /// Search records of an object type.
+    pub fn search(
         &self,
-        name: &str,
-        desc: &str,
-        labels: &[(String, String)],
-    ) -> std::sync::Arc<dyn tesela_telemetry::Counter> {
-        self.metrics_registry
-            .as_ref()
-            .map(|r| r.counter(name, desc, labels))
-            .unwrap_or_else(|| std::sync::Arc::new(tesela_telemetry::NoopCounter))
+        actor: &Actor,
+        object_name: &ApiName,
+        mut query: Query,
+    ) -> Result<Page, Error> {
+        let decision = self.authorize(actor, Operation::Search, "object_type", object_name)?;
+        let requested_limit = match query.limit {
+            Some(limit) => limit,
+            None => self.max_query_limit,
+        };
+        if requested_limit > self.max_query_limit {
+            query.limit = Some(self.max_query_limit);
+        }
+        if let Some(row_filter) = decision.row_filter {
+            query = query.and_filter(row_filter);
+        }
+        let mut page = self
+            .store_for_object(object_name)?
+            .search(object_name, &query)?;
+        redact(&mut page.records, &decision.redactions);
+        self.emit(
+            actor,
+            "search",
+            "object_type",
+            object_name,
+            true,
+            page.records.len() as i64,
+        )?;
+        Ok(page)
     }
 
-    /// Get a histogram from the metrics registry (or a no-op histogram if none configured).
-    pub(crate) fn metric_histogram(
-        &self,
-        name: &str,
-        desc: &str,
-        labels: &[(String, String)],
-    ) -> std::sync::Arc<dyn tesela_telemetry::Histogram> {
-        self.metrics_registry
-            .as_ref()
-            .map(|r| r.histogram(name, desc, labels))
-            .unwrap_or_else(|| std::sync::Arc::new(tesela_telemetry::NoopHistogram))
+    /// Get one record by primary key.
+    pub fn get(&self, actor: &Actor, object_name: &ApiName, pk: &Value) -> Result<Record, Error> {
+        let decision = self.authorize(actor, Operation::Read, "object_type", object_name)?;
+        let mut record = self
+            .store_for_object(object_name)?
+            .get(object_name, pk)?
+            .ok_or_else(|| Error::not_found("record", pk))?;
+        redact(std::slice::from_mut(&mut record), &decision.redactions);
+        self.emit(actor, "get", "object_type", object_name, true, 1)?;
+        Ok(record)
     }
+
+    /// Apply a mutation to an object type.
+    pub fn mutate(
+        &self,
+        actor: &Actor,
+        object_name: &ApiName,
+        mutation: Mutation,
+    ) -> Result<MutationResult, Error> {
+        self.authorize(actor, Operation::Mutate, "object_type", object_name)?;
+        let store = self.store_for_object(object_name)?;
+        let primary_key = self.primary_key_for_object(object_name)?;
+        let result = apply_mutation(store.as_ref(), object_name, &primary_key, mutation)?;
+        self.emit(
+            actor,
+            "mutate",
+            "object_type",
+            object_name,
+            true,
+            rows_affected_count(result.rows_affected),
+        )?;
+        Ok(result)
+    }
+
+    /// Aggregate records of an object type.
+    pub fn aggregate(
+        &self,
+        actor: &Actor,
+        object_name: &ApiName,
+        query: AggregateQuery,
+    ) -> Result<AggregateResult, Error> {
+        self.authorize(actor, Operation::Aggregate, "object_type", object_name)?;
+        let result = self
+            .store_for_object(object_name)?
+            .aggregate(object_name, &query)?;
+        self.emit(
+            actor,
+            "aggregate",
+            "object_type",
+            object_name,
+            true,
+            result.groups.len() as i64,
+        )?;
+        Ok(result)
+    }
+
+    /// Traverse a link type.
+    pub fn traverse(
+        &self,
+        actor: &Actor,
+        link_name: &ApiName,
+        query: TraversalQuery,
+    ) -> Result<Page, Error> {
+        self.authorize(actor, Operation::Traverse, "link_type", link_name)?;
+        let snapshot = self.snapshot()?;
+        let link = snapshot
+            .links
+            .get(link_name)
+            .ok_or_else(|| Error::not_found("link_type", link_name))?;
+        let datasource = link
+            .source
+            .as_ref()
+            .and_then(|source| source.datasource.as_ref())
+            .cloned()
+            .or_else(|| {
+                snapshot
+                    .object_types
+                    .get(&link.to)
+                    .map(|object_type| object_type.source.datasource.clone())
+            })
+            .ok_or_else(|| Error::validation(format!("link '{link_name}' has no datasource")))?;
+        let page = self
+            .store_router
+            .store_for_datasource(&datasource)?
+            .traverse(link_name, &query)?;
+        self.emit(
+            actor,
+            "traverse",
+            "link_type",
+            link_name,
+            true,
+            page.records.len() as i64,
+        )?;
+        Ok(page)
+    }
+
+    /// Resolve a named object set.
+    pub fn resolve_object_set(&self, actor: &Actor, name: &ApiName) -> Result<Page, Error> {
+        let object_set = self
+            .snapshot()?
+            .object_sets
+            .get(name)
+            .cloned()
+            .ok_or_else(|| Error::not_found("object_set", name))?;
+        self.search(
+            actor,
+            &object_set.object_type,
+            Query {
+                filter: object_set.filter.clone(),
+                sort: object_set
+                    .sort
+                    .iter()
+                    .map(|item| tesela_store::Sort {
+                        property: item.property.clone(),
+                        direction: match item.direction {
+                            tesela_ir::SortDirection::Asc => tesela_store::SortDirection::Asc,
+                            tesela_ir::SortDirection::Desc => tesela_store::SortDirection::Desc,
+                        },
+                    })
+                    .collect(),
+                limit: object_set.limit,
+                ..Query::default()
+            },
+        )
+    }
+
+    /// Compose named object sets.
+    pub fn compose_object_sets(
+        &self,
+        actor: &Actor,
+        names: &[ApiName],
+        op: tesela_ir::SetOp,
+    ) -> Result<Page, Error> {
+        let mut pages = Vec::with_capacity(names.len());
+        for name in names {
+            pages.push(self.resolve_object_set(actor, name)?);
+        }
+        let records = compose_pages(pages, op);
+        Ok(Page {
+            records,
+            next_cursor: None,
+        })
+    }
+
+    fn snapshot(&self) -> Result<Arc<OntologySnapshot>, Error> {
+        let guard = lock_read(&self.ontology)?;
+        Ok(Arc::clone(&guard))
+    }
+
+    fn store_for_object(&self, object_name: &ApiName) -> Result<Arc<dyn OntologyStore>, Error> {
+        let snapshot = self.snapshot()?;
+        let object_type = snapshot
+            .object_types
+            .get(object_name)
+            .ok_or_else(|| Error::not_found("object_type", object_name))?;
+        self.store_router
+            .store_for_datasource(&object_type.source.datasource)
+    }
+
+    fn primary_key_for_object(&self, object_name: &ApiName) -> Result<ApiName, Error> {
+        let snapshot = self.snapshot()?;
+        snapshot
+            .object_types
+            .get(object_name)
+            .map(|object_type| object_type.primary_key.clone())
+            .ok_or_else(|| Error::not_found("object_type", object_name))
+    }
+
+    fn authorize(
+        &self,
+        actor: &Actor,
+        operation: Operation,
+        resource_kind: &str,
+        resource: &ApiName,
+    ) -> Result<PolicyDecision, Error> {
+        let decision = self.policy_engine.evaluate(&PolicyRequest {
+            actor: actor.clone(),
+            operation,
+            resource_kind: resource_kind.to_string(),
+            resource: resource.clone(),
+            context: Default::default(),
+        })?;
+        if decision.allow {
+            Ok(decision)
+        } else {
+            Err(Error::policy_denied(match decision.reason {
+                Some(reason) => reason,
+                None => "policy denied".to_string(),
+            }))
+        }
+    }
+
+    fn emit(
+        &self,
+        actor: &Actor,
+        operation: &str,
+        resource_kind: &str,
+        resource: &ApiName,
+        success: bool,
+        result_count: i64,
+    ) -> Result<(), Error> {
+        if let Some(audit_sink) = &self.audit_sink {
+            audit_sink.record(AuditEvent {
+                actor_id: actor.user_id.clone(),
+                operation: operation.to_string(),
+                resource_kind: resource_kind.to_string(),
+                resource: resource.to_string(),
+                success,
+                result_count,
+            })?;
+        }
+        if let Some(event_bus) = &self.event_bus {
+            event_bus.publish(OntologyEvent {
+                kind: operation.to_string(),
+                resource_kind: resource_kind.to_string(),
+                resource: resource.to_string(),
+                actor_id: actor.user_id.clone(),
+            })?;
+        }
+        Ok(())
+    }
+}
+
+fn apply_mutation(
+    store: &dyn OntologyStore,
+    object_name: &ApiName,
+    primary_key_name: &ApiName,
+    mutation: Mutation,
+) -> Result<MutationResult, Error> {
+    match mutation {
+        Mutation::Create { values } => store.create(object_name, values),
+        Mutation::Update {
+            primary_key,
+            values,
+        } => store.update(object_name, &primary_key, values),
+        Mutation::Delete { primary_key } => store.delete(object_name, &primary_key),
+        Mutation::Upsert { values } => {
+            let primary_key = values.get(primary_key_name).cloned().ok_or_else(|| {
+                Error::bad_request(format!(
+                    "upsert for '{}' requires primary key '{}'",
+                    object_name, primary_key_name
+                ))
+            })?;
+            match store.get(object_name, &primary_key)? {
+                Some(_) => store.update(object_name, &primary_key, values),
+                None => store.create(object_name, values),
+            }
+        }
+        Mutation::Batch { items } => {
+            let mut affected = 0i64;
+            for item in items {
+                let rows_affected =
+                    apply_mutation(store, object_name, primary_key_name, item)?.rows_affected;
+                affected += rows_affected_count(rows_affected);
+            }
+            Ok(MutationResult {
+                record: None,
+                rows_affected: Some(affected),
+            })
+        }
+    }
+}
+
+fn max_query_limit(limit: Option<i32>) -> i32 {
+    if let Some(limit) = limit {
+        return limit;
+    }
+    1000
+}
+
+fn rows_affected_count(rows_affected: Option<i64>) -> i64 {
+    if let Some(count) = rows_affected {
+        return count;
+    }
+    0
+}
+
+fn redact(records: &mut [Record], redactions: &[ApiName]) {
+    for record in records {
+        for property in redactions {
+            record.values.remove(property);
+        }
+    }
+}
+
+fn compose_pages(pages: Vec<Page>, op: tesela_ir::SetOp) -> Vec<Record> {
+    match op {
+        tesela_ir::SetOp::Union => pages.into_iter().flat_map(|page| page.records).collect(),
+        tesela_ir::SetOp::Intersect => intersect_pages(pages),
+        tesela_ir::SetOp::Subtract => subtract_pages(pages),
+    }
+}
+
+fn intersect_pages(mut pages: Vec<Page>) -> Vec<Record> {
+    if pages.is_empty() {
+        return Vec::new();
+    }
+    let mut base = pages.remove(0).records;
+    for page in pages {
+        base.retain(|record| {
+            page.records
+                .iter()
+                .any(|candidate| candidate.primary_key == record.primary_key)
+        });
+    }
+    base
+}
+
+fn subtract_pages(mut pages: Vec<Page>) -> Vec<Record> {
+    if pages.is_empty() {
+        return Vec::new();
+    }
+    let mut base = pages.remove(0).records;
+    for page in pages {
+        base.retain(|record| {
+            !page
+                .records
+                .iter()
+                .any(|candidate| candidate.primary_key == record.primary_key)
+        });
+    }
+    base
 }

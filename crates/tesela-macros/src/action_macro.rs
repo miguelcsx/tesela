@@ -33,10 +33,22 @@ pub(crate) fn expand(args: TokenStream, input: TokenStream) -> TokenStream {
     let fn_name_str = fn_name.to_string();
     let api_name_str = fn_name_str.clone();
 
-    let risk = macro_args.risk.unwrap_or_else(|| "low".to_string());
-    let handler_kind = macro_args.handler.unwrap_or_else(|| "callback".to_string());
-    let display_name = macro_args.display.unwrap_or_else(|| fn_name_str.clone());
-    let description = macro_args.description.unwrap_or_default();
+    let risk = match macro_args.risk {
+        Some(value) => value,
+        None => "low".to_string(),
+    };
+    let handler_kind = match macro_args.handler {
+        Some(value) => value,
+        None => "callback".to_string(),
+    };
+    let display_name = match macro_args.display {
+        Some(value) => value,
+        None => fn_name_str.clone(),
+    };
+    let mut description = String::new();
+    if let Some(value) = macro_args.description {
+        description = value;
+    }
 
     let params = &input_fn.sig.inputs;
     let mut schema_props = Vec::new();

@@ -1,7 +1,43 @@
 #![allow(dead_code)]
 
+extern crate self as tesela;
+
+pub mod core {
+    pub use tesela_core::*;
+}
+
+pub mod ir {
+    pub use tesela_ir::*;
+}
+
+#[derive(Clone, Copy)]
+enum TestDatasource {
+    Memory,
+}
+
+impl tesela::core::ApiNameSource for TestDatasource {
+    fn api_name(&self) -> &'static str {
+        match self {
+            Self::Memory => "memory",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum CustomerField {
+    Id,
+}
+
+impl tesela::core::ApiNameSource for CustomerField {
+    fn api_name(&self) -> &'static str {
+        match self {
+            Self::Id => "id",
+        }
+    }
+}
+
 #[derive(tesela_macros::ObjectType)]
-#[tesela(datasource = "memory", primary_key = "id")]
+#[tesela(datasource = TestDatasource::Memory, primary_key = CustomerField::Id)]
 struct Customer {
     #[tesela(indexed, unique, description = "Primary key")]
     id: String,
@@ -10,10 +46,6 @@ struct Customer {
     #[tesela(indexed)]
     revenue: f64,
 }
-
-#[derive(tesela_macros::Agent)]
-#[tesela(model = "claude-sonnet-4-6")]
-struct SupportAgent {}
 
 #[test]
 fn test_object_type_derive() {
@@ -24,21 +56,14 @@ fn test_object_type_derive() {
 
     let id_prop = &ot.properties[0];
     assert_eq!(id_prop.api_name.as_ref(), "id");
-    assert!(id_prop.indexed.unwrap());
-    assert!(id_prop.unique.unwrap());
+    assert_eq!(id_prop.indexed, Some(true));
+    assert_eq!(id_prop.unique, Some(true));
 
     let email_prop = &ot.properties[1];
-    assert!(email_prop.nullable.unwrap());
-    assert!(email_prop.encrypted.unwrap());
+    assert_eq!(email_prop.nullable, Some(true));
+    assert_eq!(email_prop.encrypted, Some(true));
 
     let revenue_prop = &ot.properties[2];
-    assert!(revenue_prop.indexed.unwrap());
-    assert!(!revenue_prop.nullable.unwrap_or(false));
-}
-
-#[test]
-fn test_agent_derive() {
-    let agent = SupportAgent::tesela_agent();
-    assert_eq!(agent.api_name.as_ref(), "support_agent");
-    assert_eq!(agent.model.as_deref(), Some("claude-sonnet-4-6"));
+    assert_eq!(revenue_prop.indexed, Some(true));
+    assert_ne!(revenue_prop.nullable, Some(true));
 }

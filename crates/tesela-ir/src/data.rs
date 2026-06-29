@@ -1,8 +1,8 @@
-//! Runtime data types (records, pages, results).
+//! Runtime data records and result types.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::collections::BTreeMap;
-use tesela_core::{ApiName, Value};
+use tesela_core::{ApiName, Error, Value};
 
 /// A single record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -15,24 +15,67 @@ pub struct Record {
     pub values: BTreeMap<ApiName, Value>,
 }
 
+impl Record {
+    fn key(key: &str) -> ApiName {
+        ApiName::new_unchecked(key)
+    }
+
+    /// Return a field value by string key.
+    pub fn get(&self, key: &str) -> Option<&Value> {
+        self.values.get(&Self::key(key))
+    }
+
+    /// Return a string field.
+    pub fn get_str(&self, key: &str) -> Option<&str> {
+        self.get(key).and_then(Value::as_str)
+    }
+
+    /// Return a field as JSON.
+    pub fn get_json(&self, key: &str) -> Option<serde_json::Value> {
+        self.get(key).cloned().map(serde_json::Value::from)
+    }
+
+    /// Decode a field into a typed value.
+    pub fn decode<T: DeserializeOwned>(&self, key: &str) -> Result<T, Error> {
+        let json = self
+            .get_json(key)
+            .ok_or_else(|| Error::bad_request(format!("{key} is missing")))?;
+        serde_json::from_value(json).map_err(|error| Error::bad_request(error.to_string()))
+    }
+
+    /// Consume the record into a JSON object map.
+    pub fn into_json_map(self) -> serde_json::Map<String, serde_json::Value> {
+        self.values
+            .into_iter()
+            .map(|(key, value)| (key.to_string(), serde_json::Value::from(value)))
+            .collect()
+    }
+}
+
+impl From<Record> for serde_json::Value {
+    fn from(record: Record) -> Self {
+        serde_json::Value::Object(record.into_json_map())
+    }
+}
+
 /// A page of records.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Page {
     /// Records in this page.
     #[serde(default)]
     pub records: Vec<Record>,
-    /// Next page cursor (empty if no more pages).
+    /// Next page cursor.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub next_cursor: Option<String>,
 }
 
-/// Result of a mutation operation.
+/// Result of a mutation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MutationResult {
-    /// The mutated record (for create/update/upsert).
+    /// Mutated record, when available.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub record: Option<Record>,
-    /// Number of rows affected.
+    /// Number of affected rows.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub rows_affected: Option<i64>,
 }
@@ -40,7 +83,7 @@ pub struct MutationResult {
 /// Result of an action execution.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ActionResult {
-    /// Status (success, failed, rejected, queued).
+    /// Status: success, failed, rejected, queued.
     pub status: String,
     /// Output payload.
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -53,102 +96,10 @@ pub struct ActionResult {
     pub run_id: Option<String>,
 }
 
-/// Result of an aggregation query.
+/// Result of an aggregate query.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AggregateResult {
     /// Aggregated groups.
     #[serde(default)]
     pub groups: Vec<BTreeMap<String, Value>>,
-}
-
-/// Result of an upload operation.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct UploadResult {
-    /// Upload run ID.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub run_id: Option<String>,
-    /// Load ID.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub load_id: Option<String>,
-    /// Number of rows loaded.
-    #[serde(default)]
-    pub rows_loaded: i64,
-    /// Number of rows skipped.
-    #[serde(default)]
-    pub rows_skipped: i64,
-    /// Skipped rows with reasons.
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub skipped_rows: Vec<Value>,
-    /// Quality check results.
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub quality: Vec<Value>,
-}
-
-/// Result of an agent run.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct AgentRun {
-    /// Run ID.
-    pub id: String,
-    /// Status (running, completed, failed, timed_out).
-    pub status: String,
-    /// Final output.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub output: Option<String>,
-    /// Error message.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub error: Option<String>,
-    /// Messages exchanged.
-    #[serde(skip_serializing_if = "Vec::is_empty", default)]
-    pub messages: Vec<BTreeMap<String, Value>>,
-    /// Number of tool calls made.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub tool_calls: Option<i32>,
-    /// Tokens used.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub tokens_used: Option<i32>,
-    /// Cost in USD.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub cost_usd: Option<f64>,
-    /// Evaluation result attached when an evaluator is configured.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub eval_passed: Option<bool>,
-    /// Evaluation score in `[0.0, 1.0]`.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub eval_score: Option<f64>,
-    /// Human-readable evaluation notes.
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub eval_notes: Option<String>,
-}
-
-/// An explain plan for a query.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ExplainPlan {
-    /// Execution steps.
-    #[serde(default)]
-    pub steps: Vec<BTreeMap<String, Value>>,
-}
-
-/// Health status response.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HealthStatus {
-    /// Overall status (healthy, degraded, unhealthy).
-    pub status: String,
-    /// Spec version.
-    pub spec_version: String,
-    /// Workspace name.
-    pub workspace: String,
-    /// Number of registered datasources.
-    pub datasource_count: usize,
-    /// Number of active policy rules.
-    pub policy_count: usize,
-    /// Number of defined roles.
-    pub role_count: usize,
-}
-
-/// Capability advertisement.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Capabilities {
-    /// Capabilities as a flat map.
-    #[serde(flatten)]
-    pub values: BTreeMap<String, Value>,
 }

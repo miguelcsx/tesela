@@ -1,81 +1,44 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-//! Tesela — ontology-driven application runtime.
+//! Tesela facade.
 //!
-//! This is the top-level facade crate that re-exports all Tesela subsystems.
-//! For most use cases, a single `use tesela::*;` is sufficient.
-//!
-//! # Crate structure
-//!
-//! | Crate | Purpose |
-//! |-------|---------|
-//! | `tesela-core` | Core types: `Value`, `ApiName`, `Error`, `DataType`, `FilterOp` |
-//! | `tesela-ir` | Intermediate representation: `Spec`, `ObjectType`, `LinkType`, … |
-//! | `tesela-graph` | Dependency graph analysis over specs |
-//! | `tesela-compiler` | Validation pipeline: compiler passes over `Spec` |
-//! | `tesela-runtime` | Runtime engine: query, mutation, action, agent execution |
-//! | `tesela-memory` | In-memory backend implementation |
-//! | `tesela-server` | Axum-based HTTP REST server |
-//! | `tesela-graphql` | async-graphql dynamic schema integration |
-//! | `tesela-mcp` | Model Context Protocol (JSON-RPC 2.0) server |
-//! | `tesela-sdk` | Fluent builder API for defining `Spec` objects |
+//! Tesela is a library for ontology-driven platforms. It provides primitives,
+//! ontology IR, store contracts, and a runtime handle. Protocols, cloud
+//! adapters, SDKs, agents, and application services are owned by the platform.
 
-/// Optional runtime adapters re-exported by the facade crate.
-pub mod adapters {
-    /// APXM agent runtime adapter.
-    #[cfg(feature = "adapter-apxm")]
-    pub mod apxm {
-        pub use tesela_adapter_apxm::*;
-    }
+pub use tesela_core as core;
+pub use tesela_ir as ir;
+pub use tesela_runtime as runtime;
+pub use tesela_store as store;
 
-    /// BigQuery backend adapter.
-    #[cfg(feature = "adapter-bigquery")]
-    pub mod bigquery {
-        pub use tesela_adapter_bigquery::*;
-    }
+#[cfg(feature = "macros")]
+pub use tesela_macros::{ObjectType, TraitDef, action, policy};
 
-    /// Google Cloud Storage object-store adapter.
-    #[cfg(feature = "adapter-gcs")]
-    pub mod gcs {
-        pub use tesela_adapter_gcs::*;
-    }
+/// Common imports for platform code.
+pub mod prelude {
+    pub use tesela_core::{
+        ApiName, ApiNameSource, DataType, Error, FilterOp, LinkCardinality, Operation, Value,
+    };
+    pub use tesela_ir::{
+        ActionResult, ActionType, AggregateResult, Datasource, Filter, LinkMapping, LinkSource,
+        LinkType, MutationResult, ObjectSet, ObjectSource, ObjectType, ObjectTypeDefinition, Page,
+        Property, Record, Role, SetOp, Spec, StaticIndex, StaticObjectType, StaticProperty,
+    };
+    pub use tesela_runtime::{
+        ActionDescribeArgs, AggregateArgs, AggregateFunctionInput, AggregateInput, AllowAllPolicy,
+        EmptyArgs, GetArgs, ObjectSetComposeArgs, ObjectSetComposeOp, ObjectSetResolveArgs,
+        OntologyHandle, OntologyTool, OntologyToolDefinition, Runtime, RuntimeOptions, SearchArgs,
+        ToolApprovalPolicy, ToolSideEffect as TeselaToolSideEffect, TraverseArgs,
+        ontology_tool_definitions,
+    };
+    pub use tesela_store::{
+        Actor, AggregateQuery, Aggregation, AggregationFunction, AuditEvent, AuditSink, EventBus,
+        MemoryStore, Mutation, OntologyEvent, OntologyStore, PolicyDecision, PolicyEngine,
+        PolicyRequest, Query, SnapshotDefault, Sort, SortDirection, StaticStoreRouter,
+        StoreCapabilities, StoreRouter, TraversalQuery, VersionedRecordSchema, next_version,
+        restore_values, snapshot_record,
+    };
 }
 
-pub use tesela_compiler as compiler;
-pub use tesela_core as core;
-pub use tesela_graph as graph;
-pub use tesela_graphql as graphql;
-pub use tesela_ir as ir;
-pub use tesela_mcp as mcp;
-pub use tesela_memory as memory;
-pub use tesela_runtime as runtime;
-pub use tesela_sdk as sdk;
-pub use tesela_server as server;
-
-#[cfg(feature = "macros")]
-pub use tesela_macros;
-#[cfg(feature = "macros")]
-pub use tesela_macros::{Agent, ObjectType, action};
-
-// ---------------------------------------------------------------------------
-// Commonly-used re-exports at the top level for ergonomic usage
-// ---------------------------------------------------------------------------
-
-pub use tesela_core::{ApiName, DataType, Error, FilterOp, LinkCardinality, Operation, Value};
-pub use tesela_ir::{
-    AggregateResult, Datasource, Filter, LinkMapping, LinkSource, LinkType, MutationResult,
-    ObjectSet, ObjectSource, ObjectType, Page, Property, Record, SetOp, Spec,
-};
-pub use tesela_memory::MemoryBackend;
-pub use tesela_runtime::agents::ontology_tools;
-pub use tesela_runtime::ports::{
-    Aggregator, AuditSink, Backend, DefaultBackendRegistry, EventBus, Getter, Mutator,
-    PolicyEvaluator, Searcher,
-};
-pub use tesela_runtime::query::{
-    Actor, AggregateQuery, Aggregation, AuditRecord, BackendCapabilities, Event, Mutation,
-    PolicyDecision, PolicyRequest, Query,
-};
-pub use tesela_runtime::runtime::{Runtime, RuntimeOptions};
-pub use tesela_sdk::App;
+pub use prelude::*;

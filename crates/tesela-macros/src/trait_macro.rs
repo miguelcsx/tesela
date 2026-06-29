@@ -29,8 +29,14 @@ pub(crate) fn expand(input: TokenStream) -> TokenStream {
     let struct_name_str = struct_name.to_string();
     let api_name_str = to_snake_case(&struct_name_str);
 
-    let macro_args = TraitArgs::from_attributes(&input.attrs).unwrap_or_default();
-    let display_name = macro_args.display.unwrap_or(struct_name_str);
+    let macro_args = match TraitArgs::from_attributes(&input.attrs) {
+        Ok(value) => value,
+        Err(error) => return error.write_errors().into(),
+    };
+    let display_name = match macro_args.display {
+        Some(value) => value,
+        None => struct_name_str,
+    };
 
     let fields = match &input.data {
         syn::Data::Struct(ds) => match &ds.fields {
@@ -54,17 +60,26 @@ pub(crate) fn expand(input: TokenStream) -> TokenStream {
     let mut property_builders = Vec::new();
 
     for field in &fields {
-        let field_name = field
-            .ident
-            .as_ref()
-            .expect("named struct field")
-            .to_string();
+        let field_name = match &field.ident {
+            Some(ident) => ident.to_string(),
+            None => {
+                return syn::Error::new(Span::call_site(), "TraitDef requires named fields")
+                    .to_compile_error()
+                    .into();
+            }
+        };
         let ty_str = type_to_string(&field.ty);
         let is_opt = is_option(&ty_str);
         let data_type = rust_type_to_data_type(&ty_str);
 
-        let field_args = TraitFieldArgs::from_attributes(&field.attrs).unwrap_or_default();
-        let field_description = field_args.description.unwrap_or_default();
+        let field_args = match TraitFieldArgs::from_attributes(&field.attrs) {
+            Ok(value) => value,
+            Err(error) => return error.write_errors().into(),
+        };
+        let mut field_description = String::new();
+        if let Some(value) = field_args.description {
+            field_description = value;
+        }
         let field_nullable = field_args.nullable.is_present() || is_opt;
 
         property_builders.push(quote! {
@@ -77,14 +92,12 @@ pub(crate) fn expand(input: TokenStream) -> TokenStream {
                 unique: None,
                 indexed: None,
                 default: None,
-                computed: None,
                 source_column: None,
                 allowed_values: None,
                 sort_order: None,
                 tags: Vec::new(),
                 markings: Vec::new(),
                 encrypted: None,
-                quality: Vec::new(),
                 metadata: None,
             }
         });
