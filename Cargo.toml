@@ -2,24 +2,10 @@
 members = [
     "crates/tesela-core",
     "crates/tesela-ir",
-    "crates/tesela-graph",
-    "crates/tesela-compiler",
+    "crates/tesela-store",
     "crates/tesela-runtime",
-    "crates/tesela-memory",
-    "crates/tesela-server",
-    "crates/tesela-graphql",
-    "crates/tesela-mcp",
-    "crates/tesela-sdk",
     "crates/tesela-macros",
-    "crates/tesela-py",
-    "crates/tesela-vector",
-    "crates/tesela-telemetry",
-    "crates/tesela-ids",
     "crates/tesela",
-    "adapters/tesela-adapter-postgres",
-    "adapters/tesela-adapter-apxm",
-    "adapters/tesela-adapter-bigquery",
-    "adapters/tesela-adapter-gcs",
 ]
 resolver = "3"
 
@@ -36,23 +22,9 @@ readme = "README.md"
 [workspace.dependencies]
 tesela-core = { path = "crates/tesela-core", version = "0.1.0" }
 tesela-ir = { path = "crates/tesela-ir", version = "0.1.0" }
-tesela-graph = { path = "crates/tesela-graph", version = "0.1.0" }
-tesela-compiler = { path = "crates/tesela-compiler", version = "0.1.0" }
+tesela-store = { path = "crates/tesela-store", version = "0.1.0" }
 tesela-runtime = { path = "crates/tesela-runtime", version = "0.1.0" }
-tesela-memory = { path = "crates/tesela-memory", version = "0.1.0" }
-tesela-server = { path = "crates/tesela-server", version = "0.1.0" }
-tesela-graphql = { path = "crates/tesela-graphql", version = "0.1.0" }
-tesela-mcp = { path = "crates/tesela-mcp", version = "0.1.0" }
-tesela-sdk = { path = "crates/tesela-sdk", version = "0.1.0" }
 tesela-macros = { path = "crates/tesela-macros", version = "0.1.0" }
-tesela-py = { path = "crates/tesela-py", version = "0.1.0" }
-tesela-vector = { path = "crates/tesela-vector", version = "0.1.0" }
-tesela-telemetry = { path = "crates/tesela-telemetry", version = "0.1.0" }
-tesela-ids = { path = "crates/tesela-ids", version = "0.1.0" }
-tesela-adapter-postgres = { path = "adapters/tesela-adapter-postgres", version = "0.1.0" }
-tesela-adapter-apxm = { path = "adapters/tesela-adapter-apxm", version = "0.1.0" }
-tesela-adapter-bigquery = { path = "adapters/tesela-adapter-bigquery", version = "0.1.0" }
-tesela-adapter-gcs = { path = "adapters/tesela-adapter-gcs", version = "0.1.0" }
 
 sqlx-postgres = { version = "0.8", default-features = false, features = ["json", "chrono", "uuid"] }
 
@@ -79,6 +51,8 @@ async-graphql-axum = "7"
 jsonschema = "0.30"
 tokio-stream = "0.1"
 futures-util = "0.3"
+futures = "0.3"
+async-trait = "0.1"
 jsonrpc-core = "22"
 schemars = "0.8"
 tracing = "0.1"
