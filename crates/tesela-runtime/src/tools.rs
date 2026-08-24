@@ -46,9 +46,6 @@ pub struct EmptyArgs {}
 pub struct SearchArgs {
     /// Object type API name.
     pub object_type: String,
-    /// Optional scenario scope.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub scenario_id: Option<String>,
     /// Optional page size.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<i32>,
@@ -70,9 +67,6 @@ pub struct GetArgs {
 pub struct AggregateArgs {
     /// Object type API name.
     pub object_type: String,
-    /// Optional scenario scope.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub scenario_id: Option<String>,
     /// Group-by property names.
     #[serde(default)]
     pub group_by: Vec<String>,
@@ -296,9 +290,7 @@ impl OntologyTool {
                 "Use scoped filters whenever possible; prefer get or traverse when you already have IDs."
             }
             Self::Get => "Use when the user or frontend context provides an object ID.",
-            Self::Aggregate => {
-                "Use for numeric summaries; include scenario_id when answering tenant-scoped questions."
-            }
+            Self::Aggregate => "Use for numeric summaries over one object type.",
             Self::ObjectSetResolve => "Use saved object sets instead of recreating common filters.",
             Self::ObjectSetCompose => {
                 "Use to combine saved object sets without loading unrelated records."
