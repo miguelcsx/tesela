@@ -6,7 +6,6 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 description = "Store contracts and in-memory store for Tesela ontology runtimes."
-publish = false
 
 [dependencies]
 tesela-core = { workspace = true }

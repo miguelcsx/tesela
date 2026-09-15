@@ -83,8 +83,8 @@ pub(crate) fn expand(input: TokenStream) -> TokenStream {
         let field_nullable = field_args.nullable.is_present() || is_opt;
 
         property_builders.push(quote! {
-            ::tesela_ir::Property {
-                api_name: ::tesela_core::ApiName::new_unchecked(#field_name),
+            ::tesela::ir::Property {
+                api_name: ::tesela::core::ApiName::new_unchecked(#field_name),
                 display: None,
                 description: if #field_description.is_empty() { None } else { Some(#field_description.to_string()) },
                 data_type: #data_type,
@@ -106,9 +106,9 @@ pub(crate) fn expand(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         impl #struct_name {
             /// Return the Tesela `Trait` definition for this struct.
-            pub fn tesela_trait() -> ::tesela_ir::Trait {
-                ::tesela_ir::Trait {
-                    api_name: ::tesela_core::ApiName::new_unchecked(#api_name_str),
+            pub fn tesela_trait() -> ::tesela::ir::Trait {
+                ::tesela::ir::Trait {
+                    api_name: ::tesela::core::ApiName::new_unchecked(#api_name_str),
                     display: Some(#display_name.to_string()),
                     description: None,
                     properties: vec![ #(#property_builders),* ],

@@ -8,7 +8,7 @@ repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
 readme.workspace = true
-description = "Ontology-driven application runtime — define object types, links, policies, actions, and agents in a declarative spec; query, mutate, and serve them over REST, GraphQL, or MCP."
+description = "Ontology-driven library facade: declarative specs, store contracts, policy and native runtime."
 
 [dependencies]
 tesela-core = { workspace = true }
@@ -16,8 +16,10 @@ tesela-ir = { workspace = true }
 tesela-store = { workspace = true }
 tesela-runtime = { workspace = true }
 tesela-macros = { workspace = true, optional = true }
+serde_json = { workspace = true }
 
 [features]
+default = ["macros"]
 macros = ["dep:tesela-macros"]
 
 [dev-dependencies]

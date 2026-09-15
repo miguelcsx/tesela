@@ -1,9 +1,15 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use tesela_core::{ApiName, DataType, Error, Value};
-use tesela_ir::{Datasource, ObjectSource, ObjectType, Property, Spec};
-use tesela_store::{Actor, MemoryStore, Mutation, Query, StaticStoreRouter};
+use tesela_core::{ApiName, DataType, Error, Value, Version};
+use tesela_ir::{
+    ActionHandler, ActionResult, ActionType, Datasource, MutationResult, ObjectSource, ObjectType,
+    Page, Property, Record, Spec,
+};
+use tesela_store::{
+    ActionRequest, Actor, AuditEvent, AuditSink, DenyAllPolicy, MemoryStore, Mutation,
+    OntologyStore, Query, StaticStoreRouter, StoreCapabilities,
+};
 
 use crate::{AllowAllPolicy, Runtime, RuntimeOptions};
 
@@ -82,6 +88,145 @@ fn upsert_requires_declared_primary_key_value() -> Result<(), Error> {
         .ok_or_else(|| Error::internal("upsert without primary key succeeded"))?;
 
     assert!(matches!(error, Error::BadRequest { .. }));
+    Ok(())
+}
+
+struct ActionStore(Arc<MemoryStore>);
+
+impl OntologyStore for ActionStore {
+    fn store_type(&self) -> &str {
+        "action_test"
+    }
+    fn capabilities(&self) -> StoreCapabilities {
+        let mut value = self.0.capabilities();
+        value.execute_action = true;
+        value
+    }
+    fn search(&self, object_type: &ApiName, query: &Query) -> Result<Page, Error> {
+        self.0.search(object_type, query)
+    }
+    fn get(&self, object_type: &ApiName, primary_key: &Value) -> Result<Option<Record>, Error> {
+        self.0.get(object_type, primary_key)
+    }
+    fn create(
+        &self,
+        object_type: &ApiName,
+        values: BTreeMap<ApiName, Value>,
+    ) -> Result<MutationResult, Error> {
+        self.0.create(object_type, values)
+    }
+    fn update(
+        &self,
+        object_type: &ApiName,
+        primary_key: &Value,
+        values: BTreeMap<ApiName, Value>,
+    ) -> Result<MutationResult, Error> {
+        self.0.update(object_type, primary_key, values)
+    }
+    fn delete(&self, object_type: &ApiName, primary_key: &Value) -> Result<MutationResult, Error> {
+        self.0.delete(object_type, primary_key)
+    }
+    fn execute_action(&self, request: ActionRequest) -> Result<ActionResult, Error> {
+        Ok(ActionResult {
+            status: "success".into(),
+            output: Some(request.input),
+            error: None,
+            run_id: request.run_id,
+        })
+    }
+}
+
+#[derive(Default)]
+struct TestAudit(std::sync::Mutex<Vec<AuditEvent>>);
+
+impl AuditSink for TestAudit {
+    fn record(&self, event: AuditEvent) -> Result<(), Error> {
+        self.0
+            .lock()
+            .map_err(|error| Error::internal(error.to_string()))?
+            .push(event);
+        Ok(())
+    }
+}
+
+#[test]
+fn actions_are_routed_authorized_and_audited() -> Result<(), Error> {
+    let mut spec = analytics_spec()?;
+    spec.actions.push(ActionType {
+        api_name: api_name("sync_zones")?,
+        display: None,
+        description: None,
+        subject: Some(api_name("zones")?),
+        handler: ActionHandler {
+            kind: "callback".into(),
+            target: None,
+            config: None,
+        },
+        input_schema: None,
+        output_schema: None,
+        mode: None,
+        risk_level: None,
+        idempotency_key: None,
+        deprecated_at: None,
+        metadata: None,
+    });
+    let memory = MemoryStore::new();
+    memory.set_spec(spec.clone())?;
+    let router = Arc::new(StaticStoreRouter::new());
+    router.register(api_name("analytics")?, Arc::new(ActionStore(memory)))?;
+    let audit = Arc::new(TestAudit::default());
+    let runtime = Runtime::new(
+        spec.clone(),
+        RuntimeOptions {
+            store_router: Some(router.clone()),
+            policy_engine: Some(Arc::new(AllowAllPolicy)),
+            audit_sink: Some(audit.clone()),
+            ..RuntimeOptions::default()
+        },
+    )?;
+    let request = ActionRequest {
+        action: api_name("sync_zones")?,
+        input: Value::string("ok"),
+        actor: test_actor(),
+        run_id: None,
+    };
+    assert_eq!(
+        runtime.execute_action(request.clone())?.output,
+        Some(Value::string("ok"))
+    );
+    assert_eq!(
+        audit
+            .0
+            .lock()
+            .map_err(|error| Error::internal(error.to_string()))?
+            .len(),
+        1
+    );
+
+    let denied = Runtime::new(
+        spec.clone(),
+        RuntimeOptions {
+            store_router: Some(router),
+            policy_engine: Some(Arc::new(DenyAllPolicy)),
+            ..RuntimeOptions::default()
+        },
+    )?;
+    assert!(matches!(
+        denied.execute_action(request.clone()),
+        Err(Error::PolicyDenied { .. })
+    ));
+    spec.actions[0].subject = None;
+    let mut invalid = spec.clone();
+    invalid.version = Version::new("tesela.spec.v2");
+    assert!(matches!(
+        runtime.apply_spec(invalid),
+        Err(Error::Validation { .. })
+    ));
+    runtime.apply_spec(spec)?;
+    assert!(matches!(
+        runtime.execute_action(request),
+        Err(Error::UnsupportedCapability { .. })
+    ));
     Ok(())
 }
 

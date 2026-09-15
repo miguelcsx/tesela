@@ -4,11 +4,13 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use tesela_core::{ApiName, Error, Operation, Value, lock_read, lock_write};
-use tesela_ir::{AggregateResult, MutationResult, ObjectSet, Page, Record, Spec};
+use tesela_ir::{
+    ActionResult, AggregateResult, MutationResult, ObjectSet, Page, Record, SPEC_VERSION, Spec,
+};
 use tesela_store::{
-    Actor, AggregateQuery, AuditEvent, AuditSink, EventBus, Mutation, OntologyEvent, OntologyStore,
-    PolicyDecision, PolicyEngine, PolicyRequest, Query, StaticStoreRouter, StoreRouter,
-    TraversalQuery,
+    ActionRequest, Actor, AggregateQuery, AuditEvent, AuditSink, EventBus, Mutation, OntologyEvent,
+    OntologyStore, PolicyDecision, PolicyEngine, PolicyRequest, Query, StaticStoreRouter,
+    StoreRouter, TraversalQuery,
 };
 
 use crate::AllowAllPolicy;
@@ -43,6 +45,7 @@ struct OntologySnapshot {
     spec: Arc<Spec>,
     object_types: HashMap<ApiName, Arc<tesela_ir::ObjectType>>,
     links: HashMap<ApiName, Arc<tesela_ir::LinkType>>,
+    actions: HashMap<ApiName, Arc<tesela_ir::ActionType>>,
     object_sets: HashMap<ApiName, Arc<ObjectSet>>,
 }
 
@@ -56,6 +59,11 @@ impl OntologySnapshot {
                 .collect(),
             links: spec
                 .link_types
+                .iter()
+                .map(|item| (item.api_name.clone(), Arc::new(item.clone())))
+                .collect(),
+            actions: spec
+                .actions
                 .iter()
                 .map(|item| (item.api_name.clone(), Arc::new(item.clone())))
                 .collect(),
@@ -100,6 +108,11 @@ pub struct Runtime {
 impl Runtime {
     /// Create a runtime from a spec and platform-provided ports.
     pub fn new(spec: Spec, options: RuntimeOptions) -> Result<Arc<Self>, Error> {
+        validate_spec_version(&spec)?;
+        let max_query_limit = max_query_limit(options.max_query_limit);
+        if max_query_limit <= 0 {
+            return Err(Error::validation("max_query_limit must be positive"));
+        }
         let store_router = match options.store_router {
             Some(router) => router,
             None => Arc::new(StaticStoreRouter::new()),
@@ -113,7 +126,7 @@ impl Runtime {
             policy_engine,
             audit_sink: options.audit_sink,
             event_bus: options.event_bus,
-            max_query_limit: max_query_limit(options.max_query_limit),
+            max_query_limit,
         }))
     }
 
@@ -124,6 +137,7 @@ impl Runtime {
 
     /// Atomically replace the active spec.
     pub fn apply_spec(&self, spec: Spec) -> Result<(), Error> {
+        validate_spec_version(&spec)?;
         *lock_write(&self.ontology)? = Arc::new(OntologySnapshot::build(spec));
         Ok(())
     }
@@ -191,6 +205,43 @@ impl Runtime {
             object_name,
             true,
             rows_affected_count(result.rows_affected),
+        )?;
+        Ok(result)
+    }
+
+    /// Execute a declared action through the store of its subject object type.
+    pub fn execute_action(&self, request: ActionRequest) -> Result<ActionResult, Error> {
+        let snapshot = self.snapshot()?;
+        let action = snapshot
+            .actions
+            .get(&request.action)
+            .ok_or_else(|| Error::not_found("action", &request.action))?;
+        let subject = action.subject.as_ref().ok_or_else(|| {
+            Error::unsupported(format!("action '{}' has no subject", request.action))
+        })?;
+        self.authorize(
+            &request.actor,
+            Operation::Execute,
+            "action",
+            &request.action,
+        )?;
+        let object_type = snapshot
+            .object_types
+            .get(subject)
+            .ok_or_else(|| Error::not_found("object_type", subject))?;
+        let store = self
+            .store_router
+            .store_for_datasource(&object_type.source.datasource)?;
+        let actor = request.actor.clone();
+        let action_name = request.action.clone();
+        let result = store.execute_action(request)?;
+        self.emit(
+            &actor,
+            "execute",
+            "action",
+            &action_name,
+            result.status == "success",
+            1,
         )?;
         Ok(result)
     }
@@ -429,6 +480,17 @@ fn max_query_limit(limit: Option<i32>) -> i32 {
         return limit;
     }
     1000
+}
+
+fn validate_spec_version(spec: &Spec) -> Result<(), Error> {
+    if spec.version.as_ref() == SPEC_VERSION {
+        Ok(())
+    } else {
+        Err(Error::validation(format!(
+            "unsupported spec version '{}'; expected {SPEC_VERSION}",
+            spec.version
+        )))
+    }
 }
 
 fn rows_affected_count(rows_affected: Option<i64>) -> i64 {

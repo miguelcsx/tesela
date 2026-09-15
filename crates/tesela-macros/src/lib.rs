@@ -5,14 +5,14 @@
 //!
 //! # Derive macros
 //!
-//! * `ObjectType` — derive an `tesela_ir::ObjectType` from a struct.
-//! * `LinkType` — derive an `tesela_ir::LinkType` from a struct.
-//! * `TraitDef` — derive an `tesela_ir::Trait` from a struct.
+//! * `ObjectType` — derive a `tesela::ir::ObjectType` from a struct.
+//! * `LinkType` — derive a `tesela::ir::LinkType` from a struct.
+//! * `TraitDef` — derive a `tesela::ir::Trait` from a struct.
 //!
 //! # Attribute macros
 //!
-//! * `action` — derive an `tesela_ir::ActionType` from a free function.
-//! * `policy` — derive an `tesela_ir::PolicyRule` from a free function.
+//! * `action` — derive a `tesela::ir::ActionType` from a free function.
+//! * `policy` — derive a `tesela::ir::PolicyRule` from a free function.
 
 mod action_macro;
 mod helpers;
@@ -26,7 +26,7 @@ use proc_macro::TokenStream;
 /// Derive `tesela_object_type()` for a struct.
 ///
 /// Struct-level:
-/// `#[tesela(datasource = Datasource::Memory, primary_key = Field::Id, display = "...")]`
+/// `#[tesela(datasource = "memory", primary_key = "id", display = "...")]`
 /// Field-level:
 /// `#[tesela(indexed, unique, nullable, data_type = tesela::DataType::TimestampTz)]`
 #[proc_macro_derive(ObjectType, attributes(tesela))]
@@ -40,6 +40,7 @@ pub fn derive_object_type(input: TokenStream) -> TokenStream {
 /// # Arguments
 ///
 /// * `risk` — risk level: `"low"` (default), `"medium"`, or `"high"`.
+/// * `subject` — optional object type whose store executes this action.
 /// * `handler` — handler kind (default: `"callback"`).
 /// * `display` — human-readable label (default: function name).
 /// * `description` — action description.

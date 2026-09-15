@@ -9,6 +9,8 @@ use syn::parse_macro_input;
 #[derive(Debug, Default, FromMeta)]
 struct ActionArgs {
     #[darling(default)]
+    subject: Option<String>,
+    #[darling(default)]
     risk: Option<String>,
     #[darling(default)]
     handler: Option<String>,
@@ -32,11 +34,20 @@ pub(crate) fn expand(args: TokenStream, input: TokenStream) -> TokenStream {
     let fn_name = &input_fn.sig.ident;
     let fn_name_str = fn_name.to_string();
     let api_name_str = fn_name_str.clone();
+    let subject = match macro_args.subject.as_deref() {
+        Some(name) => quote!(Some(::tesela::core::ApiName::new_unchecked(#name))),
+        None => quote!(None),
+    };
 
     let risk = match macro_args.risk {
         Some(value) => value,
         None => "low".to_string(),
     };
+    if !matches!(risk.as_str(), "low" | "medium" | "high") {
+        return syn::Error::new_spanned(&input_fn, format!("unknown action risk '{risk}'"))
+            .to_compile_error()
+            .into();
+    }
     let handler_kind = match macro_args.handler {
         Some(value) => value,
         None => "callback".to_string(),
@@ -58,15 +69,16 @@ pub(crate) fn expand(args: TokenStream, input: TokenStream) -> TokenStream {
         {
             let param_name = pi.ident.to_string();
             let ty_str = type_to_string(&pt.ty);
-            let dt_str = match ty_str.as_str() {
+            let base_type = ty_str.trim_start_matches("Option<").trim_end_matches('>');
+            let dt_str = match base_type {
                 "String" | "&str" => "string",
                 "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64" => "integer",
-                "f32" | "f64" => "float",
+                "f32" | "f64" => "number",
                 "bool" => "boolean",
                 _ => "string",
             };
             schema_props.push(quote! {
-                (#param_name.to_string(), serde_json::json!({"type": #dt_str}))
+                (#param_name.to_string(), ::tesela::json::json!({"type": #dt_str}))
             });
         }
     }
@@ -96,15 +108,15 @@ pub(crate) fn expand(args: TokenStream, input: TokenStream) -> TokenStream {
 
         impl #action_struct_name {
             /// Return the Tesela `ActionType` definition for this action.
-            pub fn tesela_action_type() -> ::tesela_ir::ActionType {
-                let props: std::collections::HashMap<String, serde_json::Value> =
+            pub fn tesela_action_type() -> ::tesela::ir::ActionType {
+                let props: std::collections::HashMap<String, ::tesela::json::Value> =
                     vec![ #(#schema_props),* ].into_iter().collect();
-                ::tesela_ir::ActionType {
-                    api_name: ::tesela_core::ApiName::new_unchecked(#api_name_str),
+                ::tesela::ir::ActionType {
+                    api_name: ::tesela::core::ApiName::new_unchecked(#api_name_str),
                     display: Some(#display_name.to_string()),
                     description: if #description.is_empty() { None } else { Some(#description.to_string()) },
-                    subject: None,
-                    handler: ::tesela_ir::ActionHandler {
+                    subject: #subject,
+                    handler: ::tesela::ir::ActionHandler {
                         kind: #handler_kind.to_string(),
                         target: Some(#api_name_str.to_string()),
                         config: None,
@@ -112,7 +124,7 @@ pub(crate) fn expand(args: TokenStream, input: TokenStream) -> TokenStream {
                     input_schema: if props.is_empty() {
                         None
                     } else {
-                        Some(::tesela_core::Value::new(serde_json::json!({
+                        Some(::tesela::core::Value::new(::tesela::json::json!({
                             "type": "object",
                             "properties": props,
                         })))

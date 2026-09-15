@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 extern crate self as tesela;
 
 pub mod core {
@@ -49,6 +47,14 @@ struct Customer {
 
 #[test]
 fn test_object_type_derive() {
+    let customer = Customer {
+        id: "1".into(),
+        email: "a@example.com".into(),
+        revenue: 1.0,
+    };
+    assert_eq!(customer.id, "1");
+    assert_eq!(customer.email, "a@example.com");
+    assert_eq!(customer.revenue, 1.0);
     let ot = Customer::tesela_object_type();
     assert_eq!(ot.api_name.as_ref(), "customer");
     assert_eq!(ot.source.datasource.as_ref(), "memory");

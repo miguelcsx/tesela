@@ -7,13 +7,15 @@
 //! ontology IR, store contracts, and a runtime handle. Protocols, cloud
 //! adapters, SDKs, agents, and application services are owned by the platform.
 
+/// JSON support used by generated declarative definitions.
+pub use serde_json as json;
 pub use tesela_core as core;
 pub use tesela_ir as ir;
 pub use tesela_runtime as runtime;
 pub use tesela_store as store;
 
 #[cfg(feature = "macros")]
-pub use tesela_macros::{ObjectType, TraitDef, action, policy};
+pub use tesela_macros::{LinkType, ObjectType, TraitDef, action, policy};
 
 /// Common imports for platform code.
 pub mod prelude {

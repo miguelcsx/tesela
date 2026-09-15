@@ -40,20 +40,25 @@ pub(crate) fn expand(input: TokenStream) -> TokenStream {
         .map_or("one_to_many", |value| value);
 
     let cardinality_tokens = match cardinality_str {
-        "one_to_one" => quote!(::tesela_core::LinkCardinality::OneToOne),
-        "many_to_many" => quote!(::tesela_core::LinkCardinality::ManyToMany),
-        _ => quote!(::tesela_core::LinkCardinality::OneToMany),
+        "one_to_one" => quote!(::tesela::core::LinkCardinality::OneToOne),
+        "many_to_many" => quote!(::tesela::core::LinkCardinality::ManyToMany),
+        "one_to_many" => quote!(::tesela::core::LinkCardinality::OneToMany),
+        other => {
+            return syn::Error::new_spanned(&input, format!("unknown link cardinality '{other}'"))
+                .to_compile_error()
+                .into();
+        }
     };
 
     let expanded = quote! {
         impl #struct_name {
             /// Return the Tesela `LinkType` definition for this struct.
-            pub fn tesela_link_type() -> ::tesela_ir::LinkType {
-                ::tesela_ir::LinkType {
-                    api_name: ::tesela_core::ApiName::new_unchecked(#api_name_str),
+            pub fn tesela_link_type() -> ::tesela::ir::LinkType {
+                ::tesela::ir::LinkType {
+                    api_name: ::tesela::core::ApiName::new_unchecked(#api_name_str),
                     display: Some(#display_name.to_string()),
-                    from: ::tesela_core::ApiName::new_unchecked(#from_str),
-                    to: ::tesela_core::ApiName::new_unchecked(#to_str),
+                    from: ::tesela::core::ApiName::new_unchecked(#from_str),
+                    to: ::tesela::core::ApiName::new_unchecked(#to_str),
                     cardinality: #cardinality_tokens,
                     source: None,
                     mappings: Vec::new(),

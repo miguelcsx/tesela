@@ -39,8 +39,13 @@ pub(crate) fn expand(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let effect_str = macro_args.effect.as_deref().map_or("allow", |value| value);
     let effect_tokens = match effect_str {
-        "deny" => quote!(::tesela_core::PolicyEffect::Deny),
-        _ => quote!(::tesela_core::PolicyEffect::Allow),
+        "deny" => quote!(::tesela::core::PolicyEffect::Deny),
+        "allow" => quote!(::tesela::core::PolicyEffect::Allow),
+        other => {
+            return syn::Error::new_spanned(&input_fn, format!("unknown policy effect '{other}'"))
+                .to_compile_error()
+                .into();
+        }
     };
 
     let roles_tokens = if let Some(ref roles_str) = macro_args.roles {
@@ -55,22 +60,26 @@ pub(crate) fn expand(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let ops_tokens = if let Some(ref ops_str) = macro_args.operations {
-        let items: Vec<_> = ops_str
-            .split(',')
-            .map(|s| {
-                let s = s.trim();
-                match s {
-                    "search" => quote!(::tesela_core::Operation::Search),
-                    "read" => quote!(::tesela_core::Operation::Read),
-                    "mutate" => quote!(::tesela_core::Operation::Mutate),
-                    "traverse" => quote!(::tesela_core::Operation::Traverse),
-                    "aggregate" => quote!(::tesela_core::Operation::Aggregate),
-                    "upload" => quote!(::tesela_core::Operation::Upload),
-                    "execute" => quote!(::tesela_core::Operation::Execute),
-                    _ => quote!(::tesela_core::Operation::Read),
+        let mut items = Vec::new();
+        for s in ops_str.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+            items.push(match s {
+                "search" => quote!(::tesela::core::Operation::Search),
+                "read" => quote!(::tesela::core::Operation::Read),
+                "mutate" => quote!(::tesela::core::Operation::Mutate),
+                "traverse" => quote!(::tesela::core::Operation::Traverse),
+                "aggregate" => quote!(::tesela::core::Operation::Aggregate),
+                "upload" => quote!(::tesela::core::Operation::Upload),
+                "execute" => quote!(::tesela::core::Operation::Execute),
+                other => {
+                    return syn::Error::new_spanned(
+                        &input_fn,
+                        format!("unknown policy operation '{other}'"),
+                    )
+                    .to_compile_error()
+                    .into();
                 }
-            })
-            .collect();
+            });
+        }
         quote!(vec![ #(#items),* ])
     } else {
         quote!(Vec::new())
@@ -82,7 +91,7 @@ pub(crate) fn expand(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let resource_tokens = match &macro_args.resource {
-        Some(r) => quote!(Some(::tesela_core::ApiName::new_unchecked(#r))),
+        Some(r) => quote!(Some(::tesela::core::ApiName::new_unchecked(#r))),
         None => quote!(None),
     };
 
@@ -121,9 +130,9 @@ pub(crate) fn expand(args: TokenStream, input: TokenStream) -> TokenStream {
 
         impl #policy_struct_name {
             /// Return the Tesela `PolicyRule` definition for this policy.
-            pub fn tesela_policy_rule() -> ::tesela_ir::PolicyRule {
-                ::tesela_ir::PolicyRule {
-                    api_name: ::tesela_core::ApiName::new_unchecked(#fn_name_str),
+            pub fn tesela_policy_rule() -> ::tesela::ir::PolicyRule {
+                ::tesela::ir::PolicyRule {
+                    api_name: ::tesela::core::ApiName::new_unchecked(#fn_name_str),
                     description: #description_tokens,
                     effect: #effect_tokens,
                     actors: Vec::new(),
