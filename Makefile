@@ -1,7 +1,6 @@
 ## Tesela development Makefile.
 ##
-## Tesela is a Rust runtime with a hand-written Python SDK. Targets here avoid
-## legacy Go-era build paths and keep development checks explicit.
+## Tesela Rust and native Python development targets.
 
 PYTHON ?= python
 
@@ -27,7 +26,7 @@ test: rust-test python-test ## Run Rust and Python tests.
 build: rust-build python-build ## Build Rust crates and the Python extension package.
 
 .PHONY: verify
-verify: rust-fmt-check rust-clippy rust-test python-test ## Run the local pre-push gate.
+verify: rust-fmt-check rust-clippy rust-test rust-package python-test python-build docs-check ## Run the local pre-push gate.
 
 .PHONY: rust-build
 rust-build: ## Build all Rust crates.
@@ -58,16 +57,21 @@ rust-doc: ## Build Rust documentation.
 	cargo doc --workspace --no-deps
 
 .PHONY: rust-package
-rust-package: ## Check crate package metadata without publishing.
-	cargo package --workspace --allow-dirty --no-verify
+rust-package: ## Build all public .crate archives without publishing.
+	cargo package --workspace --exclude tesela-python --allow-dirty --no-verify
 
 .PHONY: python-test
-python-test: ## Run Python SDK tests against the PyO3 extension.
-	cd sdk/python && PYTHONPATH=. $(PYTHON) -m pytest tests/ -v
+python-test: ## Install the extension and run Python tests.
+	$(PYTHON) -m pip install -e sdk/python
+	$(PYTHON) -m pytest sdk/python/tests/ -q
 
 .PHONY: python-build
 python-build: ## Build Python sdist/wheel.
-	cd sdk/python && $(PYTHON) -m maturin build
+	$(PYTHON) -m build sdk/python
+
+.PHONY: docs-check
+docs-check: ## Verify local Markdown links and version consistency.
+	$(PYTHON) scripts/check_release.py
 
 .PHONY: clean
 clean: ## Remove local build artifacts.

@@ -1,69 +1,66 @@
 # Tesela
 
-Tesela is an ontology-driven application library and toolchain for teams that
-want Foundry/AIP-style primitives without adopting a platform. It gives you the
-core contracts — ontology, graph, policy, action, agent, audit, metadata, and
-data-access abstractions — so you can build your own runtime on your own
-infrastructure, against your own backends, in your own language ecosystem.
+Tesela is a Rust library with native Python bindings for ontology-driven applications. Define object types, links, actions and policies as a `tesela.spec.v1` document, then run that ontology against stores you provide. The library owns the ontology contract and runtime; your application owns concrete connectors and transports.
 
-Tesela does not own your connectors, your warehouse semantics, your anomaly
-logic, your entity-resolution strategy, or your catalog conventions. Those stay
-external. Tesela provides explicit interfaces and declarative data models so
-those capabilities can be plugged in cleanly instead of being hardcoded into
-the framework.
+## Rust
 
-## Core surfaces
+Add `tesela = "0.1"` to your `Cargo.toml`. The facade includes the declarative macros by default:
 
-- Programmatic ontology/spec registration via Rust builders, Python decorators,
-  and canonical JSON specs.
-- External backend contract with optional capabilities for query, mutation,
-  bulk load, traversal, and explain-plan support.
-- Policy engine, action runtime, audit pipeline, and agent tool derivation.
-- Schema graph utilities for shortest path, multi-hop traversal planning, cycle
-  detection, impact analysis, and explicit lineage edges.
-- Extensible metadata, property transforms, computed-property dependencies, and
-  discovery/statistics hooks.
-- Hand-written SDK surfaces that emit the same canonical IR and embed the same
-  native runtime without generated HTTP clients.
+```rust
+use tesela::ObjectType;
 
-See [`docs/`](./docs/) for the architectural specification.
+#[derive(ObjectType)]
+#[tesela(datasource = "memory", primary_key = "id")]
+struct Customer {
+    id: String,
+    email: Option<String>,
+}
 
-## Design principles
-
-1. **Schema-neutral** — no built-in domain knowledge.
-2. **Backend-neutral** — data access is defined by interfaces; connectors live outside the core.
-3. **Policy-neutral** — teams define their own roles, hierarchies, and rules.
-4. **Language-neutral** — SDKs in Python, Rust, and future languages build the same IR and call the same native runtime.
-5. **Infrastructure-neutral** — Tesela is a library/toolchain; teams provision and operate their own runtime.
-6. **Explicit over magic** — nothing happens that wasn't declared.
-7. **Everything audited** — append-only, non-suppressible.
-8. **Ontology is live data** — changes take effect without restart.
-
-## What stays outside the core
-
-- Concrete connectors and vendor-specific adapter packages.
-- CDC, event streaming, anomaly detection, entity resolution, and catalog
-  enrichment heuristics.
-- Warehouse-specific optimizers, caches, and execution engines.
-- Approval systems, notification systems, and governance workflows.
-
-## Quick start
-
-```bash
-make build
-make test
+fn main() {
+    let object_type = Customer::tesela_object_type();
+    println!("{}", object_type.api_name);
+}
 ```
 
-Native SDK runtime:
+Build a `tesela::Spec`, register a store with `tesela::StaticStoreRouter`, and construct `tesela::Runtime` with an explicit policy engine. `tesela::MemoryStore` and `tesela::AllowAllPolicy` are intended for local development. Production applications provide their own `OntologyStore` and `PolicyEngine`; audit and event ports are optional.
 
-```bash
-make build-cabi
+## Python
+
+Install `tesela` with pip. The Python package embeds the same Rust runtime; it is not an HTTP client.
+
+```python
+from tesela import MemoryStore, Runtime, Spec
+
+spec = Spec("demo")
+spec.datasource("memory")
+
+@spec.object_type(datasource="memory", primary_key="id")
+class Customer:
+    id: str
+    email: str | None
+
+runtime = Runtime(spec, stores={"memory": MemoryStore()}, policy="allow_all")
+actor = {"user_id": "local"}
+runtime.mutate("customer", {"create": {"values": {"id": "1", "email": "a@example.com"}}}, actor=actor)
+print(runtime.get("customer", "1", actor=actor)["values"])
 ```
 
-Language SDKs compile their local builders to `tesela.spec.v1` JSON and pass
-that IR to the native runtime library. They are not generated clients and do not
-communicate with Tesela over HTTP.
+`Spec` also has decorators for traits, links, actions and policies. `Spec.add(section, definition)` accepts all fields of the canonical IR for advanced declarations. `Spec.to_json()` validates declarations against the Rust IR and preserves supplied optional fields.
+
+Python stores implement `search(object_type, query)`, `get(object_type, primary_key)`, `create(object_type, values)`, `update(object_type, primary_key, values)` and `delete(object_type, primary_key)`. They may implement `aggregate`, `traverse` and `execute_action`. Inputs and results are ordinary dictionaries matching the Rust contract. A policy object implements `evaluate(request)` and returns a decision dictionary with `allow`; optional audit and event objects implement `record(event)` and `publish(event)`.
+
+Runtime operations are `search`, `get`, `mutate`, `aggregate`, `traverse`, `resolve_object_set`, `compose_object_sets` and `execute_action`. Every operation takes an explicit actor. Actions execute through the store of their declared `subject` object type; an action without `subject` remains metadata and cannot execute. `tool_definitions()` returns the native ontology tool definitions for agent integrations.
+
+The `@spec.action` and Rust `#[action]` decorators declare action metadata; execution is supplied by the subject's store through `execute_action`.
+Declared policy rules are metadata; the policy engine you pass to `Runtime` evaluates access requests.
+Action input and output schemas are metadata in v1; the executing store validates payloads if needed.
+
+## Development and release
+
+Install Rust, Python 3.10–3.13, maturin, build and pytest. Run `make verify` for formatting, Clippy, Rust tests and Python tests; `make python-build` produces Python wheel and sdist. The release workflow checks version tags, runs tests, publishes the internal Rust crates in dependency order and then publishes the `tesela` facade. PyPI publishing requires a Trusted Publisher for `.github/workflows/release.yml`; Cargo publishing requires `CARGO_REGISTRY_TOKEN`.
+
+The reproducible performance baseline is in the repository's `benchmarks/README.md`. The API has no built-in HTTP, GraphQL or MCP server. Policy enforcement is required; audit and event delivery occur only when those ports are configured.
 
 ## License
 
-Apache 2.0. See [LICENSE](./LICENSE).
+Apache-2.0.
