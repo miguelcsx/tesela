@@ -6,6 +6,7 @@ members = [
     "crates/tesela-runtime",
     "crates/tesela-macros",
     "crates/tesela",
+    "sdk/python",
 ]
 resolver = "3"
 
@@ -16,7 +17,7 @@ license = "Apache-2.0"
 authors = ["Miguel Cárdenas"]
 repository = "https://github.com/miguelcsx/tesela"
 keywords = ["ontology", "runtime", "data-platform", "sdk"]
-categories = ["data-structures", "web-programming"]
+categories = ["data-structures"]
 readme = "README.md"
 
 [workspace.dependencies]
@@ -25,41 +26,20 @@ tesela-ir = { path = "crates/tesela-ir", version = "0.1.0" }
 tesela-store = { path = "crates/tesela-store", version = "0.1.0" }
 tesela-runtime = { path = "crates/tesela-runtime", version = "0.1.0" }
 tesela-macros = { path = "crates/tesela-macros", version = "0.1.0" }
-
-sqlx-postgres = { version = "0.8", default-features = false, features = ["json", "chrono", "uuid"] }
+tesela = { path = "crates/tesela", version = "0.1.0" }
 
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-indexmap = { version = "2", features = ["serde"] }
-petgraph = "0.8"
-slotmap = "1"
-smallvec = "1"
 sha2 = "0.10"
 hex = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 regex = "1"
 uuid = { version = "1", features = ["v4", "v7", "serde"] }
-axum = "0.8"
 tokio = { version = "1", features = ["full"] }
-tower = "0.5"
-tower-http = { version = "0.6", features = ["trace", "cors", "limit", "timeout"] }
-hyper = { version = "1", features = ["full"] }
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
-async-graphql = "7"
-async-graphql-axum = "7"
-jsonschema = "0.30"
-tokio-stream = "0.1"
-futures-util = "0.3"
-futures = "0.3"
-async-trait = "0.1"
-jsonrpc-core = "22"
 schemars = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-aes-gcm = "0.10"
-base64 = "0.22"
-ulid = "1"
 pyo3 = "0.26"
 
 [profile.release]
